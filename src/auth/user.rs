@@ -22,7 +22,7 @@ impl UserService {
         username: &str,
         password: &str,
     ) -> Result<(user_repo::UserRow, ApiKey)> {
-        validate_username(username)?;
+        crate::core::validate::validate_username(username)?;
         if password.is_empty() {
             return Err(AppError::Validation("password must not be empty".into()));
         }
@@ -38,23 +38,26 @@ impl UserService {
 
         let password_hash = hash_password(password)?;
         let user = user_repo::insert(&self.state.db, username, &password_hash).await?;
-        let key_row = api_key_repo::insert(
-            &self.state.db,
-            &user.id,
-            "default",
-            // Placeholder; replaced by generated plaintext.
-            "pending",
-        )
-        .await?;
 
-        // Generate the real key tied to the freshly-inserted id.
-        let key = crate::auth::api_key::generate(&key_row.id, "default");
-        // Persist the actual hash and rename the row.
-        sqlx::query("UPDATE api_keys SET key_hash = ?1 WHERE id = ?2")
+        // Insert key and update hash in a single transaction to avoid a race.
+        let key = {
+            let key_id = uuid::Uuid::now_v7().to_string();
+            let key = crate::auth::api_key::generate(&key_id, "default");
+            let now_str = chrono::Utc::now().to_rfc3339();
+            let mut tx = self.state.db.begin().await?;
+            sqlx::query(
+                "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            )
+            .bind(&key_id)
+            .bind(&user.id)
+            .bind("default")
             .bind(&key.hash)
-            .bind(&key_row.id)
-            .execute(&self.state.db)
+            .bind(&now_str)
+            .execute(&mut *tx)
             .await?;
+            tx.commit().await?;
+            key
+        };
 
         // Append a structured event.
         crate::storage::event_repo::append(
@@ -84,14 +87,25 @@ impl UserService {
             return Err(AppError::InvalidCredentials);
         }
 
-        // Create a fresh key per login.
-        let key_row = api_key_repo::insert(&self.state.db, &user.id, "login", "pending").await?;
-        let key = crate::auth::api_key::generate(&key_row.id, "login");
-        sqlx::query("UPDATE api_keys SET key_hash = ?1 WHERE id = ?2")
+        // Create a fresh key per login inside a transaction to avoid a race.
+        let key = {
+            let key_id = uuid::Uuid::now_v7().to_string();
+            let key = crate::auth::api_key::generate(&key_id, "login");
+            let now_str = chrono::Utc::now().to_rfc3339();
+            let mut tx = self.state.db.begin().await?;
+            sqlx::query(
+                "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            )
+            .bind(&key_id)
+            .bind(&user.id)
+            .bind("login")
             .bind(&key.hash)
-            .bind(&key_row.id)
-            .execute(&self.state.db)
+            .bind(&now_str)
+            .execute(&mut *tx)
             .await?;
+            tx.commit().await?;
+            key
+        };
 
         crate::storage::event_repo::append(
             &self.state.db,
@@ -124,19 +138,30 @@ impl UserService {
         if name.trim().is_empty() {
             return Err(AppError::Validation("key name must not be empty".into()));
         }
-        let key_row = api_key_repo::insert(&self.state.db, user_id, name, "pending").await?;
-        let key = crate::auth::api_key::generate(&key_row.id, name);
-        sqlx::query("UPDATE api_keys SET key_hash = ?1 WHERE id = ?2")
+        let key = {
+            let key_id = uuid::Uuid::now_v7().to_string();
+            let key = crate::auth::api_key::generate(&key_id, name);
+            let now_str = chrono::Utc::now().to_rfc3339();
+            let mut tx = self.state.db.begin().await?;
+            sqlx::query(
+                "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            )
+            .bind(&key_id)
+            .bind(user_id)
+            .bind(name)
             .bind(&key.hash)
-            .bind(&key_row.id)
-            .execute(&self.state.db)
+            .bind(&now_str)
+            .execute(&mut *tx)
             .await?;
+            tx.commit().await?;
+            key
+        };
 
         crate::storage::event_repo::append(
             &self.state.db,
             user_id,
             "api_key.create",
-            Some(&key_row.id),
+            Some(&key.id),
             Some(&serde_json::json!({ "name": name })),
         )
         .await?;
@@ -173,24 +198,6 @@ impl UserService {
             None => Ok(false),
         }
     }
-}
-
-fn validate_username(username: &str) -> Result<()> {
-    if username.is_empty() {
-        return Err(AppError::Validation("username must not be empty".into()));
-    }
-    if username.len() > 64 {
-        return Err(AppError::Validation("username is too long (max 64)".into()));
-    }
-    if !username
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.')
-    {
-        return Err(AppError::Validation(
-            "username may only contain [A-Za-z0-9_.-]".into(),
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]

@@ -79,6 +79,16 @@ fn emit_auth(json: bool, resp: &AuthResponse) -> CliResult<()> {
     print_line(format!("api_key: {}", resp.api_key));
     print_line("");
     print_line("Save the api_key now — it is not recoverable.");
+
+    let creds = crate::cli::config::Credentials {
+        api_key: Some(resp.api_key.clone()),
+        username: Some(resp.username.clone()),
+        updated_at: Some(chrono::Utc::now().to_rfc3339()),
+    };
+    if let Err(e) = creds.save_to_default() {
+        eprintln!("lineagent: could not save credentials: {e}");
+    }
+
     Ok(())
 }
 

@@ -18,7 +18,7 @@
 
 use std::time::Duration;
 
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION};
+use reqwest::header::AUTHORIZATION;
 use reqwest::{Client as HttpClient, Method, RequestBuilder, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -176,17 +176,7 @@ impl Client {
 
     fn apply_auth(&self, req: RequestBuilder) -> CliResult<RequestBuilder> {
         if let Some(key) = &self.api_key {
-            let mut headers = HeaderMap::new();
-            let header_name = HeaderName::from_static("authorization");
-            let header_value = format!("Bearer {key}");
-            let value = HeaderValue::from_str(&header_value)
-                .map_err(|e| CliError::Usage(format!("invalid api key: {e}")))?;
-            headers.insert(header_name, value);
-            let mut req = req;
-            if let Ok(v) = HeaderValue::from_str(&format!("Bearer {key}")) {
-                req = req.header(AUTHORIZATION, v);
-            }
-            Ok(req)
+            Ok(req.header(AUTHORIZATION, format!("Bearer {key}")))
         } else {
             Err(CliError::Usage(
                 "api key is required (set LINEAGENT_API_KEY or run `lineagent user login`)".into(),

@@ -167,19 +167,28 @@ pub fn save_credentials_to(path: &Path, creds: &Credentials) -> CliResult<()> {
         .map_err(|e| CliError::Other(format!("serialize credentials: {e}")))?;
     let tmp = path.with_extension("toml.tmp");
     {
-        let mut f = fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&tmp)
-            .map_err(CliError::Io)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            let mut opts = std::fs::OpenOptions::new();
-            opts.create(true).write(true).truncate(true).mode(0o600);
-            f = opts.open(&tmp).map_err(CliError::Io)?;
-        }
+        let mut f = {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .truncate(true)
+                    .mode(0o600)
+                    .open(&tmp)
+                    .map_err(CliError::Io)?
+            }
+            #[cfg(not(unix))]
+            {
+                fs::OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .truncate(true)
+                    .open(&tmp)
+                    .map_err(CliError::Io)?
+            }
+        };
         f.write_all(body.as_bytes()).map_err(CliError::Io)?;
         f.sync_all().map_err(CliError::Io)?;
     }

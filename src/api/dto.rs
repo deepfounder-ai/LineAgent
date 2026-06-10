@@ -8,8 +8,7 @@ use crate::storage::api_key_repo::ApiKeyRow;
 // Constants
 // ---------------------------------------------------------------------------
 
-pub const MIN_USERNAME_LEN: usize = 3;
-pub const MAX_USERNAME_LEN: usize = 32;
+pub use crate::core::validate::{MAX_USERNAME_LEN, MIN_USERNAME_LEN};
 pub const MIN_PASSWORD_LEN: usize = 8;
 pub const MAX_KEY_NAME_LEN: usize = 64;
 pub const MAX_BODY_BYTES: usize = 10 * 1024 * 1024; // 10 MB
@@ -101,17 +100,9 @@ pub struct HealthResponse {
 // Validation helpers
 // ---------------------------------------------------------------------------
 
+/// Validate a username for the API layer. Delegates to the shared core validator.
 pub fn validate_api_username(name: &str) -> Result<(), String> {
-    if name.len() < MIN_USERNAME_LEN {
-        return Err(format!("username must be at least {MIN_USERNAME_LEN} characters"));
-    }
-    if name.len() > MAX_USERNAME_LEN {
-        return Err(format!("username must be at most {MAX_USERNAME_LEN} characters"));
-    }
-    if !name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-') {
-        return Err("username may only contain [a-z0-9_-]".to_string());
-    }
-    Ok(())
+    crate::core::validate::validate_username(name).map_err(|e| e.to_string())
 }
 
 pub fn validate_api_password(pw: &str) -> Result<(), String> {

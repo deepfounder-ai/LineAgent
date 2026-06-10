@@ -33,3 +33,16 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+
+-- ---------------------------------------------------------------------------
+-- events
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     TEXT    NOT NULL,
+    kind        TEXT    NOT NULL,
+    ref         TEXT,
+    ts          TEXT    NOT NULL,
+    payload_json TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
