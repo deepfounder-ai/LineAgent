@@ -123,7 +123,7 @@ pub async fn update(
     description: Option<&str>,
 ) -> Result<()> {
     let now = Utc::now().to_rfc3339();
-    sqlx::query(
+    let result = sqlx::query(
         "UPDATE projects SET \
          name = COALESCE(?2, name), \
          description = COALESCE(?3, description), \
@@ -136,6 +136,9 @@ pub async fn update(
     .bind(&now)
     .execute(pool)
     .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("project id={id}")));
+    }
     Ok(())
 }
 

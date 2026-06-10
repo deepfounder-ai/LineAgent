@@ -63,6 +63,8 @@ async fn update_project() {
     project_repo::update(&pool, &id, Some("Updated"), None).await.unwrap();
     let proj = project_repo::get_by_id(&pool, &id).await.unwrap().unwrap();
     assert_eq!(proj.name, "Updated");
+    assert!(proj.description.is_none()); // COALESCE preserved None
+    assert!(proj.updated_at >= proj.created_at);
 }
 
 #[tokio::test]
@@ -74,4 +76,23 @@ async fn list_for_user() {
     project_repo::insert(&pool, &id2, "u1", "BB", "Beta", None).await.unwrap();
     let list = project_repo::list_for_user(&pool, "u1").await.unwrap();
     assert_eq!(list.len(), 2);
+    assert_eq!(list[0].key, "AA");
+    assert_eq!(list[1].key, "BB");
+}
+
+#[tokio::test]
+async fn duplicate_key_returns_conflict() {
+    let pool = setup().await;
+    let id1 = uuid::Uuid::now_v7().to_string();
+    let id2 = uuid::Uuid::now_v7().to_string();
+    project_repo::insert(&pool, &id1, "user1", "DUP", "First", None).await.unwrap();
+    let err = project_repo::insert(&pool, &id2, "user1", "DUP", "Second", None).await.unwrap_err();
+    assert!(matches!(err, lineagent::error::AppError::Conflict(_)), "expected Conflict, got {:?}", err);
+}
+
+#[tokio::test]
+async fn next_ticket_number_not_found() {
+    let pool = setup().await;
+    let err = project_repo::next_ticket_number(&pool, "nonexistent-id").await.unwrap_err();
+    assert!(matches!(err, lineagent::error::AppError::NotFound(_)), "expected NotFound, got {:?}", err);
 }
