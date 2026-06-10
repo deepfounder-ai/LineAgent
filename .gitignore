@@ -1,0 +1,4 @@
+/target
+/data
+Cargo.lock merge=binary
+.DS_Store
