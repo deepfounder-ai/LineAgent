@@ -69,6 +69,9 @@ clap_complete = "4.5"
 # HTTP client (for source URL fetching + CLI transport)
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "multipart"] }
 
+# Config
+toml = "0.8"
+
 # Misc
 url = "2"
 bytes = "1"
