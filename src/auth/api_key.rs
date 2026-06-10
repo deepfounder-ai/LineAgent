@@ -114,7 +114,7 @@ mod tests {
     fn rejects_garbage() {
         assert!(!looks_like_api_key("not-a-key"));
         assert!(!looks_like_api_key("lineagent_short"));
-        assert!(!looks_like_api_key("MNEMO_CAPS"));
+        assert!(!looks_like_api_key("LINEAGENT_CAPS_WRONG_FORMAT"));
     }
 
     #[test]
