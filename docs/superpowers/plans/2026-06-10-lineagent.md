@@ -12,8 +12,8 @@
 
 **Conventions every task follows:**
 - TDD: failing test → run-it-fails → minimal impl → run-it-passes → commit.
-- Every `core` mutating method appends an `events` row and is scoped by `user_id`.
-- Timestamps are RFC3339 TEXT. IDs are `uuid::Uuid::now_v7().to_string()`.
+- Every `core` mutating method is scoped by `user_id` and appends an audit row by calling **`storage::event_repo::append(db, user_id, kind, ref_, payload_json)` directly** (the verbatim-ported repo fn). mnemos's `core/log.rs` `LogBuilder` wrapper is filesystem-based and **not** ported — there is no on-disk log; `event_repo::append` is the only append path.
+- Timestamps are RFC3339 TEXT. IDs are `uuid::Uuid::now_v7().to_string()` — **except** `events.id`, which keeps mnemos's `INTEGER PRIMARY KEY AUTOINCREMENT`.
 - Run the full suite with `cargo test` from the repo root; run one test with `cargo test --test <file> <name> -- --nocapture`.
 
 ---
@@ -426,7 +426,7 @@ fn parses_valid_and_rejects_invalid() {
 
 - [ ] **Step 2:** Run → fail.
 
-- [ ] **Step 3: Implement** handlers as thin adapters (mnemos pattern: extract `AuthContext`, call the core service scoped by `ctx.user_id`, `?`-propagate `AppError`→`ApiError`, `Json` out). One handler per route in the spec's REST list. Keep mnemos `root`/`healthz`/auth handlers (port the auth ones verbatim; replace the landing HTML copy with LineAgent text). Wire `api/mod.rs` router exactly per the spec's REST surface, all ticket routes behind `require_auth`.
+- [ ] **Step 3: Implement** handlers as thin adapters (mnemos pattern: extract `AuthContext`, call the core service scoped by `ctx.user_id`, `?`-propagate `AppError`→`ApiError`, `Json` out). One handler per route in the spec's REST list. Keep mnemos `root`/`healthz`/auth handlers (port the auth ones verbatim; replace the landing HTML copy with LineAgent text). **Two handlers are written fresh, NOT ported:** `get_log` (mnemos's renders text via the dropped `core::log::format_log_line`; instead query `event_repo::list_for_user(db, user_id, &EventFilter{since,limit})` and return the rows as JSON) and `get_index` (return `IndexService::build` output as JSON). Wire `api/mod.rs` router exactly per the spec's REST surface, all ticket routes behind `require_auth`. **Update routes use `patch(handler)`, not mnemos's `put(...)`** — the spec mandates PATCH for `/tickets/:identifier`, `/projects/:key`, `/cycles/:id`.
 
 - [ ] **Step 4:** Run → pass. `cargo test` whole suite green.
 - [ ] **Step 5: Commit** `feat: REST API surface`
@@ -460,7 +460,7 @@ fn parses_valid_and_rejects_invalid() {
 
 - [ ] **Step 2:** Run → fail.
 
-- [ ] **Step 3: Implement** `call_tool` dispatch (one arm per tool) using mnemos arg helpers (`arg_str`, `arg_str_required`, `arg_i64`) — port those verbatim. Each handler builds the core service from `user.ctx.state`, calls it scoped by `user.user_id`, returns `vec![TextContent::json(result)]`. Errors propagate as `AppError` (the mnemos loop renders `isError`).
+- [ ] **Step 3: Implement** `call_tool` dispatch (one arm per tool) using mnemos arg helpers (`arg_str`, `arg_str_required`, `arg_i64_opt`) — port those verbatim. Each handler builds the core service from `user.ctx.state`, calls it scoped by `user.user_id`, returns `vec![TextContent::json(result)]`. Errors propagate as `AppError` (the mnemos loop renders `isError`).
 
 - [ ] **Step 4:** Run → pass.
 - [ ] **Step 5: Commit** `feat: 19 MCP tools`
@@ -483,14 +483,21 @@ fn parses_valid_and_rejects_invalid() {
 
 **Files:**
 - Create: `src/cli/commands/{projects,tickets,comments,relations,cycles}.rs`
-- Modify: `src/cli/commands/mod.rs` (dispatch), `src/cli/commands/misc.rs` (search/index/log)
+- Modify: `src/cli/client.rs` (add `patch`), `src/cli/commands/mod.rs` (dispatch), `src/cli/commands/misc.rs` (search/index/log)
 - Test: `tests/cli_e2e.rs`
 
-- [ ] **Step 1: Failing test** — port mnemos `cli_e2e.rs` harness (boot in-process server, point CLI at it). Cover: `project create`, `ticket create` (assert prints `LIN-1`), `ticket list`, `comment add`, `search`, `index`, `--json` output is valid JSON.
+- [ ] **Step 1: Add `patch` to `client.rs`** — the ported mnemos `client.rs` exposes `get/post/put/delete` but **no `patch`** (mnemos updates via PUT; LineAgent uses PATCH). Add a convenience method mirroring `put`, delegating to the existing generic `request`:
+```rust
+pub async fn patch<T: DeserializeOwned, B: Serialize>(&self, path: &str, body: &B) -> CliResult<T> {
+    self.request(reqwest::Method::PATCH, path, Some(body)).await
+}
+```
 
-- [ ] **Step 2:** Run → fail.
+- [ ] **Step 2: Failing test** — port mnemos `cli_e2e.rs` harness (boot in-process server, point CLI at it). Cover: `project create`, `ticket create` (assert prints `LIN-1`), `ticket list`, `ticket update` (PATCH path), `comment add`, `search`, `index`, `--json` output is valid JSON.
 
-- [ ] **Step 3: Implement** each command module on the mnemos `pages.rs`/`misc.rs` pattern: build the `/api/v1/...` path, `client.get/post/patch/delete`, then `print_json` (if `--json`) or a human table via `print_line`. Wire all new families into `commands/mod.rs::dispatch`. Move `search`/`index`/`log` into `misc.rs` against the new endpoints.
+- [ ] **Step 3:** Run → fail.
+
+- [ ] **Step 4: Implement** each command module on the mnemos `pages.rs`/`misc.rs` pattern: build the `/api/v1/...` path, `client.get/post/patch/delete`, then `print_json` (if `--json`) or a human table via `print_line`. Wire all new families into `commands/mod.rs::dispatch`. Move `search`/`index`/`log` into `misc.rs` against the new endpoints.
 
 - [ ] **Step 4:** Run → pass. Full `cargo test` green.
 - [ ] **Step 5: Commit** `feat: CLI surface`
