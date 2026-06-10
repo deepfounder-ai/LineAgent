@@ -132,6 +132,15 @@ impl Client {
         self.request(Method::PUT, path, Some(body)).await
     }
 
+    /// Convenience: `PATCH <path>` with a JSON body.
+    pub async fn patch<T: DeserializeOwned, B: Serialize>(
+        &self,
+        path: &str,
+        body: &B,
+    ) -> CliResult<T> {
+        self.request(Method::PATCH, path, Some(body)).await
+    }
+
     /// Convenience: `DELETE <path>` returning the JSON body.
     pub async fn delete<T: DeserializeOwned>(&self, path: &str) -> CliResult<T> {
         self.request(Method::DELETE, path, None::<&()>).await
