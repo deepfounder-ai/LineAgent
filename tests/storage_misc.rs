@@ -93,8 +93,8 @@ async fn comment_list_ordered_asc() {
         .await
         .unwrap();
 
-    // Small sleep to ensure different created_at timestamps.
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    // Sleep >1 s to ensure different RFC3339 second-resolution timestamps.
+    tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
 
     let id2 = uuid::Uuid::now_v7().to_string();
     comment_repo::insert(&pool, &id2, "user1", &ticket_id, None, "Second")
@@ -227,4 +227,18 @@ async fn cycle_insert_list_update() {
     assert_eq!(updated.name, "Sprint 1 Updated");
     // starts_at unchanged via COALESCE.
     assert_eq!(updated.starts_at.as_deref(), Some("2024-01-01T00:00:00+00:00"));
+}
+
+#[tokio::test]
+async fn cycle_update_returns_not_found() {
+    let pool = setup().await;
+    let err = cycle_repo::update(&pool, "ghost-id", Some("x"), None, None).await.unwrap_err();
+    assert!(matches!(err, lineagent::error::AppError::NotFound(_)), "expected NotFound, got {:?}", err);
+}
+
+#[tokio::test]
+async fn cycle_get_by_id_returns_none_for_missing() {
+    let pool = setup().await;
+    let result = cycle_repo::get_by_id(&pool, "nonexistent").await.unwrap();
+    assert!(result.is_none());
 }

@@ -77,9 +77,12 @@ CREATE TABLE IF NOT EXISTS cycles (
     ends_at     TEXT,
     created_at  TEXT    NOT NULL,
     updated_at  TEXT    NOT NULL,
+    UNIQUE(project_id, number),
     FOREIGN KEY(user_id)    REFERENCES users(id)    ON DELETE CASCADE,
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_cycles_project ON cycles(user_id, project_id);
 
 -- ---------------------------------------------------------------------------
 -- tickets
@@ -127,7 +130,7 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_comments_ticket ON comments(ticket_id);
+CREATE INDEX IF NOT EXISTS idx_comments_ticket ON comments(user_id, ticket_id);
 
 -- ---------------------------------------------------------------------------
 -- relations

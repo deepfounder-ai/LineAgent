@@ -77,7 +77,9 @@ pub async fn insert(
     })
 }
 
-/// Fetch a cycle by primary key.
+/// Fetch a cycle by its primary key.
+///
+/// Note: does not filter by user_id — caller must verify ownership at the service layer.
 pub async fn get_by_id(pool: &SqlitePool, id: &str) -> Result<Option<CycleRow>> {
     let row = sqlx::query(
         "SELECT id, user_id, project_id, number, name, starts_at, ends_at, created_at, updated_at \
@@ -109,9 +111,14 @@ pub async fn list_for_project(
     rows.iter().map(CycleRow::from_row).collect()
 }
 
-/// Update mutable fields of a cycle. `updated_at` is refreshed.
-/// Passing `None` for a field keeps the existing value (via COALESCE).
-/// Returns NotFound if no row was updated.
+/// Update a cycle's mutable fields. All parameters default to their current values
+/// when `None` is passed (COALESCE semantics).
+///
+/// **Limitation:** `starts_at` and `ends_at` cannot be cleared to `NULL` via this
+/// function — passing `None` preserves the existing value. Use a dedicated clear
+/// function if that is needed.
+///
+/// Returns `NotFound` if no row was updated.
 pub async fn update(
     pool: &SqlitePool,
     id: &str,
