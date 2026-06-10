@@ -1,5 +1,6 @@
 use lineagent::config::Config;
 use lineagent::storage::init_pool;
+use lineagent::storage::project_repo;
 use lineagent::storage::ticket_repo::{self, TicketFilter, TicketPatch};
 
 async fn setup() -> sqlx::SqlitePool {
@@ -28,6 +29,29 @@ async fn setup() -> sqlx::SqlitePool {
     .unwrap();
 
     pool
+}
+
+async fn insert_test_ticket(
+    pool: &sqlx::SqlitePool,
+    identifier: &str,
+    title: &str,
+) -> (project_repo::ProjectRow, ticket_repo::TicketRow) {
+    let pid = uuid::Uuid::now_v7().to_string();
+    // Use a unique key derived from the project id to avoid conflicts with the
+    // "LIN" key already seeded by setup() or prior calls in the same pool.
+    let key = format!("T{}", &pid[..8].to_uppercase().replace('-', ""));
+    let proj = project_repo::insert(pool, &pid, "user1", &key, "LineAgent", None)
+        .await
+        .unwrap();
+    let tid = uuid::Uuid::now_v7().to_string();
+    let num: i64 = identifier.split('-').last().unwrap().parse().unwrap();
+    let ticket = ticket_repo::insert(
+        pool, &tid, "user1", &pid, num, identifier, title, None, "backlog", "medium", None, None,
+        None,
+    )
+    .await
+    .unwrap();
+    (proj, ticket)
 }
 
 #[tokio::test]
@@ -137,4 +161,101 @@ async fn get_by_id_returns_none_for_missing() {
         .await
         .unwrap();
     assert!(result.is_none());
+}
+
+#[tokio::test]
+async fn update_returns_not_found_for_missing_id() {
+    let pool = setup().await;
+    let patch = ticket_repo::TicketPatch {
+        title: Some("new".to_string()),
+        ..Default::default()
+    };
+    let err = ticket_repo::update(&pool, "nonexistent-id", &patch)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(err, lineagent::error::AppError::NotFound(_)),
+        "expected NotFound, got {:?}",
+        err
+    );
+}
+
+#[tokio::test]
+async fn delete_is_idempotent() {
+    let pool = setup().await;
+    let (_, t) = insert_test_ticket(&pool, "LIN-1", "Ticket").await;
+    ticket_repo::delete(&pool, &t.id).await.unwrap();
+    // second delete should also succeed
+    ticket_repo::delete(&pool, &t.id).await.unwrap();
+}
+
+#[tokio::test]
+async fn insert_duplicate_identifier_returns_conflict() {
+    let pool = setup().await;
+    let (p, _) = insert_test_ticket(&pool, "LIN-1", "First").await;
+    let id2 = uuid::Uuid::now_v7().to_string();
+    let err = ticket_repo::insert(
+        &pool, &id2, "user1", &p.id, 2, "LIN-1", "Second", None, "backlog", "medium", None, None,
+        None,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        matches!(err, lineagent::error::AppError::Conflict(_)),
+        "expected Conflict, got {:?}",
+        err
+    );
+}
+
+#[tokio::test]
+async fn list_with_multi_filter() {
+    let pool = setup().await;
+    let (p, _) = insert_test_ticket(&pool, "LIN-1", "Ticket A").await;
+    let id2 = uuid::Uuid::now_v7().to_string();
+    ticket_repo::insert(
+        &pool, &id2, "user1", &p.id, 2, "LIN-2", "Ticket B", None, "done", "high", None, None,
+        None,
+    )
+    .await
+    .unwrap();
+    let filter = ticket_repo::TicketFilter {
+        status: Some("done".to_string()),
+        priority: Some("high".to_string()),
+        ..Default::default()
+    };
+    let list = ticket_repo::list(&pool, "user1", &filter).await.unwrap();
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0].identifier, "LIN-2");
+}
+
+#[tokio::test]
+async fn list_respects_limit() {
+    let pool = setup().await;
+    let (p, _) = insert_test_ticket(&pool, "LIN-1", "T1").await;
+    for i in 2..=5i64 {
+        let id = uuid::Uuid::now_v7().to_string();
+        ticket_repo::insert(
+            &pool,
+            &id,
+            "user1",
+            &p.id,
+            i,
+            &format!("LIN-{i}"),
+            &format!("T{i}"),
+            None,
+            "backlog",
+            "medium",
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    }
+    let filter = ticket_repo::TicketFilter {
+        limit: Some(2),
+        ..Default::default()
+    };
+    let list = ticket_repo::list(&pool, "user1", &filter).await.unwrap();
+    assert_eq!(list.len(), 2);
 }

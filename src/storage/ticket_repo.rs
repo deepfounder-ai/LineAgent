@@ -107,7 +107,13 @@ pub async fn insert(
     .bind(&now)
     .bind(&now)
     .execute(pool)
-    .await?;
+    .await
+    .map_err(|e| match &e {
+        sqlx::Error::Database(db_err) if db_err.is_unique_violation() => {
+            AppError::Conflict(format!("ticket identifier already exists: {identifier}"))
+        }
+        _ => AppError::Db(e),
+    })?;
 
     Ok(TicketRow {
         id: id.to_string(),
@@ -168,46 +174,36 @@ pub async fn get_by_identifier(
 /// Dynamic filtering is done by building the SQL string manually and binding
 /// parameters positionally; this avoids the sqlx compile-time macro restrictions.
 pub async fn list(pool: &SqlitePool, user_id: &str, filter: &TicketFilter) -> Result<Vec<TicketRow>> {
-    let limit = filter.limit.unwrap_or(100);
+    let limit = filter.limit.unwrap_or(100).min(1000);
 
-    let mut sql = String::from(
-        "SELECT id,user_id,project_id,number,identifier,title,description,status,priority,\
-         assignee,parent_id,cycle_id,created_at,updated_at FROM tickets WHERE user_id=?1",
+    let select = "SELECT id,user_id,project_id,number,identifier,title,description,status,priority,\
+                  assignee,parent_id,cycle_id,created_at,updated_at FROM tickets";
+    let mut conditions = vec!["user_id = ?1".to_string()];
+    let mut params: Vec<String> = Vec::new(); // extra params after user_id (which is ?1)
+
+    macro_rules! add_filter {
+        ($col:expr, $val:expr) => {
+            if let Some(ref v) = $val {
+                conditions.push(format!("{} = ?{}", $col, params.len() + 2));
+                params.push(v.clone());
+            }
+        };
+    }
+
+    add_filter!("project_id", filter.project_id);
+    add_filter!("status", filter.status);
+    add_filter!("priority", filter.priority);
+    add_filter!("assignee", filter.assignee);
+    add_filter!("cycle_id", filter.cycle_id);
+    add_filter!("parent_id", filter.parent_id);
+
+    let limit_placeholder = params.len() + 2;
+    let sql = format!(
+        "{} WHERE {} ORDER BY updated_at DESC LIMIT ?{}",
+        select,
+        conditions.join(" AND "),
+        limit_placeholder
     );
-    let mut idx: i32 = 2;
-    let mut params: Vec<String> = Vec::new();
-
-    if let Some(ref v) = filter.project_id {
-        sql.push_str(&format!(" AND project_id=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    if let Some(ref v) = filter.status {
-        sql.push_str(&format!(" AND status=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    if let Some(ref v) = filter.priority {
-        sql.push_str(&format!(" AND priority=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    if let Some(ref v) = filter.assignee {
-        sql.push_str(&format!(" AND assignee=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    if let Some(ref v) = filter.cycle_id {
-        sql.push_str(&format!(" AND cycle_id=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    if let Some(ref v) = filter.parent_id {
-        sql.push_str(&format!(" AND parent_id=?{idx}"));
-        idx += 1;
-        params.push(v.clone());
-    }
-    sql.push_str(&format!(" ORDER BY updated_at DESC LIMIT ?{idx}"));
 
     let mut q = sqlx::query(&sql).bind(user_id);
     for p in &params {
