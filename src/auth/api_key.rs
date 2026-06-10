@@ -20,6 +20,8 @@ pub struct ApiKey {
     pub plaintext: String,
     /// SHA-256 hash of the plaintext, hex-encoded. Persist this.
     pub hash: String,
+    /// Timestamp recorded at creation — same value written to the DB.
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 const PREFIX: &str = "lineagent_";
@@ -43,6 +45,7 @@ pub fn generate(id: impl Into<String>, name: impl Into<String>) -> ApiKey {
         name: name.into(),
         plaintext,
         hash,
+        created_at: chrono::Utc::now(),
     }
 }
 

@@ -43,7 +43,7 @@ impl UserService {
         let key = {
             let key_id = uuid::Uuid::now_v7().to_string();
             let key = crate::auth::api_key::generate(&key_id, "default");
-            let now_str = chrono::Utc::now().to_rfc3339();
+            let created_at_str = key.created_at.to_rfc3339();
             let mut tx = self.state.db.begin().await?;
             sqlx::query(
                 "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -52,7 +52,7 @@ impl UserService {
             .bind(&user.id)
             .bind("default")
             .bind(&key.hash)
-            .bind(&now_str)
+            .bind(&created_at_str)
             .execute(&mut *tx)
             .await?;
             tx.commit().await?;
@@ -91,7 +91,7 @@ impl UserService {
         let key = {
             let key_id = uuid::Uuid::now_v7().to_string();
             let key = crate::auth::api_key::generate(&key_id, "login");
-            let now_str = chrono::Utc::now().to_rfc3339();
+            let created_at_str = key.created_at.to_rfc3339();
             let mut tx = self.state.db.begin().await?;
             sqlx::query(
                 "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -100,7 +100,7 @@ impl UserService {
             .bind(&user.id)
             .bind("login")
             .bind(&key.hash)
-            .bind(&now_str)
+            .bind(&created_at_str)
             .execute(&mut *tx)
             .await?;
             tx.commit().await?;
@@ -141,7 +141,7 @@ impl UserService {
         let key = {
             let key_id = uuid::Uuid::now_v7().to_string();
             let key = crate::auth::api_key::generate(&key_id, name);
-            let now_str = chrono::Utc::now().to_rfc3339();
+            let created_at_str = key.created_at.to_rfc3339();
             let mut tx = self.state.db.begin().await?;
             sqlx::query(
                 "INSERT INTO api_keys (id, user_id, name, key_hash, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -150,7 +150,7 @@ impl UserService {
             .bind(user_id)
             .bind(name)
             .bind(&key.hash)
-            .bind(&now_str)
+            .bind(&created_at_str)
             .execute(&mut *tx)
             .await?;
             tx.commit().await?;

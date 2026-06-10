@@ -63,6 +63,10 @@ impl TestServer {
     fn patch_json(&self, path: &str, key: &str, body: &Value) -> reqwest::RequestBuilder {
         self.http.patch(self.url(path)).bearer_auth(key).json(body)
     }
+
+    fn delete(&self, path: &str, key: &str) -> reqwest::RequestBuilder {
+        self.http.delete(self.url(path)).bearer_auth(key)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -313,6 +317,167 @@ async fn relations_and_cycles() {
         .await
         .unwrap();
     assert_eq!(cycles.as_array().unwrap().len(), 1);
+}
+
+// ---------------------------------------------------------------------------
+// Uncovered routes: get_project, update_project, list_tickets with filters,
+// delete_ticket, remove_relation, update_cycle
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn uncovered_routes() {
+    let s = TestServer::start().await;
+    let key = s.register("dave").await;
+
+    // 1. Create project "LIN"
+    let project: Value = s
+        .post_json(
+            "/api/v1/projects",
+            &key,
+            &json!({ "key": "LIN", "name": "Linear Clone" }),
+        )
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(project["key"], "LIN");
+
+    // 2. GET /api/v1/projects/LIN → 200, key="LIN"
+    let resp = s.get("/api/v1/projects/LIN", &key).send().await.unwrap();
+    assert_eq!(resp.status(), 200, "get_project should 200");
+    let got: Value = resp.json().await.unwrap();
+    assert_eq!(got["key"], "LIN", "got: {got}");
+
+    // 3. PATCH /api/v1/projects/LIN → update name → 200
+    let resp = s
+        .patch_json(
+            "/api/v1/projects/LIN",
+            &key,
+            &json!({ "name": "Updated" }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "update_project should 200");
+    let updated: Value = resp.json().await.unwrap();
+    assert_eq!(updated["name"], "Updated", "got: {updated}");
+
+    // 4. Create ticket LIN-1 (backlog status)
+    let resp = s
+        .post_json(
+            "/api/v1/tickets",
+            &key,
+            &json!({ "project_key": "LIN", "title": "First issue", "status": "backlog" }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    let t1: Value = resp.json().await.unwrap();
+    assert_eq!(t1["identifier"], "LIN-1", "got: {t1}");
+
+    // 5. Create ticket LIN-2 (needed for relation)
+    let resp = s
+        .post_json(
+            "/api/v1/tickets",
+            &key,
+            &json!({ "project_key": "LIN", "title": "Second issue", "status": "backlog" }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201);
+    let t2: Value = resp.json().await.unwrap();
+    assert_eq!(t2["identifier"], "LIN-2", "got: {t2}");
+
+    // 6. GET /api/v1/tickets?project=LIN&status=backlog → at least one ticket with identifier="LIN-1"
+    let resp = s
+        .get("/api/v1/tickets?project=LIN&status=backlog", &key)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "list_tickets with filters should 200");
+    let tickets: Value = resp.json().await.unwrap();
+    let arr = tickets.as_array().expect("tickets should be an array");
+    assert!(!arr.is_empty(), "expected at least one backlog ticket");
+    let identifiers: Vec<&str> = arr
+        .iter()
+        .filter_map(|t| t["identifier"].as_str())
+        .collect();
+    assert!(
+        identifiers.contains(&"LIN-1"),
+        "LIN-1 not found in filtered results: {identifiers:?}"
+    );
+
+    // 7. POST /api/v1/relations → blocks LIN-1 → LIN-2
+    let resp = s
+        .post_json(
+            "/api/v1/relations",
+            &key,
+            &json!({
+                "from_identifier": "LIN-1",
+                "to_identifier": "LIN-2",
+                "relation_type": "blocks"
+            }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201, "add_relation should 201");
+    let relation: Value = resp.json().await.unwrap();
+    let relation_id = relation["id"].as_str().expect("relation should have id").to_string();
+    assert_eq!(relation["from_identifier"], "LIN-1");
+
+    // 8. DELETE /api/v1/relations/:id → 200 or 204
+    let resp = s
+        .delete(&format!("/api/v1/relations/{relation_id}"), &key)
+        .send()
+        .await
+        .unwrap();
+    assert!(
+        resp.status() == 200 || resp.status() == 204,
+        "remove_relation should 200 or 204, got {}",
+        resp.status()
+    );
+
+    // 9. DELETE /api/v1/tickets/LIN-1 → 200 or 204
+    let resp = s.delete("/api/v1/tickets/LIN-1", &key).send().await.unwrap();
+    assert!(
+        resp.status() == 200 || resp.status() == 204,
+        "delete_ticket should 200 or 204, got {}",
+        resp.status()
+    );
+
+    // 10. POST /api/v1/projects/LIN/cycles → create cycle
+    let resp = s
+        .post_json(
+            "/api/v1/projects/LIN/cycles",
+            &key,
+            &json!({ "name": "Sprint 1" }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 201, "create_cycle should 201");
+    let cycle: Value = resp.json().await.unwrap();
+    let cycle_id = cycle["id"].as_str().expect("cycle should have id").to_string();
+    assert_eq!(cycle["name"], "Sprint 1");
+
+    // 11. PATCH /api/v1/cycles/:id → {"name":"Sprint 2"} → 200
+    let resp = s
+        .patch_json(
+            &format!("/api/v1/cycles/{cycle_id}"),
+            &key,
+            &json!({ "name": "Sprint 2" }),
+        )
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "update_cycle should 200");
+    let updated_cycle: Value = resp.json().await.unwrap();
+    assert_eq!(updated_cycle["name"], "Sprint 2", "got: {updated_cycle}");
 }
 
 #[tokio::test]

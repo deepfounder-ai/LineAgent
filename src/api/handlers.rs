@@ -183,7 +183,7 @@ pub async fn create_key(
         view: KeyView {
             id: key.id,
             name: key.name,
-            created_at: chrono::Utc::now(),
+            created_at: key.created_at,
             last_used_at: None,
         },
         api_key: key.plaintext,
