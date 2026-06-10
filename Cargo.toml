@@ -6,7 +6,7 @@ rust-version = "1.75"
 license = "Apache-2.0"
 description = "Issue tracker for AI agents — REST/MCP/CLI over SQLite"
 readme = "README.md"
-authors = ["mnemos contributors"]
+authors = []
 
 [lib]
 name = "lineagent"
