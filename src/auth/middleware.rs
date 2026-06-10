@@ -1,4 +1,4 @@
-//! Axum middleware that turns a `Authorization: Bearer mnemo_…` header into
+//! Axum middleware that turns a `Authorization: Bearer lineagent_…` header into
 //! an authenticated [`AuthContext`] stored in the request extensions.
 
 use axum::body::Body;
@@ -35,10 +35,10 @@ pub async fn require_auth(
     };
 
     let Some(plaintext) = header_value.strip_prefix("Bearer ").or_else(|| {
-        // Allow `Token mnemo_…` for symmetry with some CLI conventions.
+        // Allow `Token lineagent_…` for symmetry with some CLI conventions.
         header_value.strip_prefix("Token ")
     }) else {
-        return unauthorized("unsupported Authorization scheme; expected Bearer mnemo_…");
+        return unauthorized("unsupported Authorization scheme; expected Bearer lineagent_…");
     };
 
     let svc = UserService::new(state.clone());

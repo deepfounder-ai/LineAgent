@@ -1,6 +1,6 @@
 //! Authentication & authorisation: password hashing, API key generation,
 //! user management, and the Axum middleware that translates a
-//! `Authorization: Bearer mnemo_…` header into an authenticated `user_id`.
+//! `Authorization: Bearer lineagent_…` header into an authenticated `user_id`.
 
 pub mod api_key;
 pub mod middleware;

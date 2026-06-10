@@ -211,12 +211,12 @@ mod tests {
         let (svc, _d) = svc().await;
         let (user, key) = svc.register("alice", "hunter2").await.expect("register");
         assert_eq!(user.username, "alice");
-        assert!(key.plaintext.starts_with("mnemo_"));
+        assert!(key.plaintext.starts_with("lineagent_"));
 
         // Login with same credentials works.
         let (u2, k2) = svc.login("alice", "hunter2").await.expect("login");
         assert_eq!(u2.id, user.id);
-        assert!(k2.plaintext.starts_with("mnemo_"));
+        assert!(k2.plaintext.starts_with("lineagent_"));
     }
 
     #[tokio::test]

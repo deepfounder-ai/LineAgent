@@ -2,11 +2,11 @@
 
 pub mod api_key_repo;
 pub mod event_repo;
-pub mod project_repo;   // stub — just declare, file doesn't exist yet
-pub mod ticket_repo;    // stub
-pub mod comment_repo;   // stub
-pub mod relation_repo;  // stub
-pub mod cycle_repo;     // stub
+pub mod project_repo;
+pub mod ticket_repo;
+pub mod comment_repo;
+pub mod relation_repo;
+pub mod cycle_repo;
 pub mod pool;
 pub mod user_repo;
 
