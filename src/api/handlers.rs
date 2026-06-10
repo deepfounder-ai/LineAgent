@@ -3,7 +3,7 @@
 //! shape the response. Domain errors flow back as [`AppError`] and are
 //! mapped to [`ApiError`] by the `?` operator.
 
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -12,8 +12,15 @@ use serde_json::json;
 use crate::api::dto::*;
 use crate::auth::middleware::AuthContext;
 use crate::auth::UserService;
+use crate::core::comment::CommentService;
+use crate::core::cycle::CycleService;
+use crate::core::index::IndexService;
+use crate::core::project::ProjectService;
+use crate::core::relation::RelationService;
+use crate::core::search::SearchService;
+use crate::core::ticket::{CreateTicket, TicketService, TicketServiceFilter, UpdateTicket};
 use crate::error::{ApiError, AppError};
-use crate::storage::{user_repo, AppState};
+use crate::storage::{event_repo, user_repo, AppState};
 
 type ApiResult<T> = Result<T, ApiError>;
 
@@ -193,6 +200,304 @@ pub async fn revoke_key(
     // Idempotent: a missing id still returns 204 so callers cannot probe.
     svc.revoke_api_key(&ctx.user_id, &id).await?;
     Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+pub async fn list_projects(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+) -> ApiResult<Response> {
+    let svc = ProjectService::new(state);
+    let projects = svc.list(&ctx.user_id).await?;
+    Ok(Json(projects).into_response())
+}
+
+pub async fn create_project(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Json(req): Json<CreateProjectReq>,
+) -> ApiResult<Response> {
+    let svc = ProjectService::new(state);
+    let project = svc
+        .create(&ctx.user_id, &req.key, &req.name, req.description.as_deref())
+        .await?;
+    Ok((StatusCode::CREATED, Json(project)).into_response())
+}
+
+pub async fn get_project(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(key): Path<String>,
+) -> ApiResult<Response> {
+    let svc = ProjectService::new(state);
+    let project = svc.get(&ctx.user_id, &key).await?;
+    Ok(Json(project).into_response())
+}
+
+pub async fn update_project(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(key): Path<String>,
+    Json(req): Json<UpdateProjectReq>,
+) -> ApiResult<Response> {
+    let svc = ProjectService::new(state);
+    let project = svc
+        .update(&ctx.user_id, &key, req.name.as_deref(), req.description.as_deref())
+        .await?;
+    Ok(Json(project).into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+pub async fn list_tickets(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Query(q): Query<ListTicketsQuery>,
+) -> ApiResult<Response> {
+    let svc = TicketService::new(state);
+    let filter = TicketServiceFilter {
+        project_key: q.project,
+        status: q.status,
+        priority: q.priority,
+        assignee: q.assignee,
+        cycle_id: q.cycle_id,
+        parent_identifier: q.parent,
+        limit: q.limit,
+    };
+    let tickets = svc.list(&ctx.user_id, filter).await?;
+    Ok(Json(tickets).into_response())
+}
+
+pub async fn create_ticket(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Json(req): Json<CreateTicketReq>,
+) -> ApiResult<Response> {
+    let svc = TicketService::new(state);
+    let input = CreateTicket {
+        project_key: req.project_key,
+        title: req.title,
+        description: req.description,
+        status: req.status,
+        priority: req.priority,
+        assignee: req.assignee,
+        parent_identifier: req.parent_identifier,
+        cycle_id: req.cycle_id,
+    };
+    let ticket = svc.create(&ctx.user_id, input).await?;
+    Ok((StatusCode::CREATED, Json(ticket)).into_response())
+}
+
+pub async fn get_ticket(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+) -> ApiResult<Response> {
+    let svc = TicketService::new(state);
+    let view = svc.get(&ctx.user_id, &id).await?;
+    Ok(Json(view).into_response())
+}
+
+pub async fn update_ticket(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateTicketReq>,
+) -> ApiResult<Response> {
+    let svc = TicketService::new(state);
+    let patch = UpdateTicket {
+        title: req.title,
+        description: req.description,
+        status: req.status,
+        priority: req.priority,
+        assignee: req.assignee,
+        parent_identifier: req.parent_identifier,
+        cycle_id: req.cycle_id,
+    };
+    let ticket = svc.update(&ctx.user_id, &id, patch).await?;
+    Ok(Json(ticket).into_response())
+}
+
+pub async fn delete_ticket(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+) -> ApiResult<Response> {
+    let svc = TicketService::new(state);
+    svc.delete(&ctx.user_id, &id).await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+pub async fn list_comments(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+) -> ApiResult<Response> {
+    let svc = CommentService::new(state);
+    let comments = svc.list(&ctx.user_id, &id).await?;
+    Ok(Json(comments).into_response())
+}
+
+pub async fn add_comment(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+    Json(req): Json<AddCommentReq>,
+) -> ApiResult<Response> {
+    let svc = CommentService::new(state);
+    let comment = svc
+        .add(&ctx.user_id, &id, req.author.as_deref(), &req.body)
+        .await?;
+    Ok((StatusCode::CREATED, Json(comment)).into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+pub async fn list_relations(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+) -> ApiResult<Response> {
+    // Resolve ticket identifier → ticket view (which includes relations)
+    let svc = TicketService::new(state);
+    let view = svc.get(&ctx.user_id, &id).await?;
+    Ok(Json(view.relations).into_response())
+}
+
+pub async fn add_relation(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Json(req): Json<AddRelationReq>,
+) -> ApiResult<Response> {
+    let svc = RelationService::new(state);
+    let relation = svc
+        .add(
+            &ctx.user_id,
+            &req.from_identifier,
+            &req.to_identifier,
+            &req.relation_type,
+        )
+        .await?;
+    Ok((StatusCode::CREATED, Json(relation)).into_response())
+}
+
+pub async fn remove_relation(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+) -> ApiResult<Response> {
+    let svc = RelationService::new(state);
+    svc.remove(&ctx.user_id, &id).await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Cycles
+// ---------------------------------------------------------------------------
+
+pub async fn list_cycles(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(key): Path<String>,
+) -> ApiResult<Response> {
+    let svc = CycleService::new(state);
+    let cycles = svc.list(&ctx.user_id, &key).await?;
+    Ok(Json(cycles).into_response())
+}
+
+pub async fn create_cycle(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(key): Path<String>,
+    Json(req): Json<CreateCycleReq>,
+) -> ApiResult<Response> {
+    let svc = CycleService::new(state);
+    let cycle = svc
+        .create(
+            &ctx.user_id,
+            &key,
+            &req.name,
+            req.starts_at.as_deref(),
+            req.ends_at.as_deref(),
+        )
+        .await?;
+    Ok((StatusCode::CREATED, Json(cycle)).into_response())
+}
+
+pub async fn update_cycle(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateCycleReq>,
+) -> ApiResult<Response> {
+    let svc = CycleService::new(state);
+    let cycle = svc
+        .update(
+            &ctx.user_id,
+            &id,
+            req.name.as_deref(),
+            req.starts_at.as_deref(),
+            req.ends_at.as_deref(),
+        )
+        .await?;
+    Ok(Json(cycle).into_response())
+}
+
+// ---------------------------------------------------------------------------
+// Search / Index / Log
+// ---------------------------------------------------------------------------
+
+pub async fn search_tickets(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Query(q): Query<SearchQuery>,
+) -> ApiResult<Response> {
+    let svc = SearchService::new(state);
+    let hits = svc.search(&ctx.user_id, &q.q, q.limit).await?;
+    Ok(Json(json!({ "count": hits.len(), "hits": hits })).into_response())
+}
+
+pub async fn get_index(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+) -> ApiResult<Response> {
+    let svc = IndexService::new(state);
+    let index = svc.build(&ctx.user_id).await?;
+    Ok(Json(index).into_response())
+}
+
+pub async fn get_log(
+    State(state): State<AppState>,
+    ctx: AuthContext,
+    Query(q): Query<LogQuery>,
+) -> ApiResult<Response> {
+    let since = q
+        .since
+        .as_deref()
+        .map(|s| {
+            chrono::DateTime::parse_from_rfc3339(s)
+                .map(|d| d.with_timezone(&chrono::Utc))
+                .map_err(|e| AppError::BadRequest(format!("invalid since datetime: {e}")))
+        })
+        .transpose()?;
+
+    let filter = event_repo::EventFilter {
+        since,
+        limit: q.limit,
+    };
+    let events = event_repo::list_for_user(&state.db, &ctx.user_id, &filter).await?;
+    Ok(Json(json!({ "items": events })).into_response())
 }
 
 // ---------------------------------------------------------------------------

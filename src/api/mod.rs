@@ -10,7 +10,7 @@ pub mod dto;
 pub mod extract;
 pub mod handlers;
 
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -28,12 +28,52 @@ pub fn router(state: AppState) -> Router {
 
     // Authenticated routes.
     let protected = Router::new()
+        // Auth
         .route("/auth/whoami", get(handlers::whoami))
         .route(
             "/auth/keys",
             get(handlers::list_keys).post(handlers::create_key),
         )
         .route("/auth/keys/:id", delete(handlers::revoke_key))
+        // Projects
+        .route(
+            "/projects",
+            get(handlers::list_projects).post(handlers::create_project),
+        )
+        .route(
+            "/projects/:key",
+            get(handlers::get_project).patch(handlers::update_project),
+        )
+        // Tickets
+        .route(
+            "/tickets",
+            get(handlers::list_tickets).post(handlers::create_ticket),
+        )
+        .route(
+            "/tickets/:id",
+            get(handlers::get_ticket)
+                .patch(handlers::update_ticket)
+                .delete(handlers::delete_ticket),
+        )
+        // Comments
+        .route(
+            "/tickets/:id/comments",
+            get(handlers::list_comments).post(handlers::add_comment),
+        )
+        // Relations
+        .route("/tickets/:id/relations", get(handlers::list_relations))
+        .route("/relations", post(handlers::add_relation))
+        .route("/relations/:id", delete(handlers::remove_relation))
+        // Cycles
+        .route(
+            "/projects/:key/cycles",
+            get(handlers::list_cycles).post(handlers::create_cycle),
+        )
+        .route("/cycles/:id", patch(handlers::update_cycle))
+        // Search / Index / Log
+        .route("/search", get(handlers::search_tickets))
+        .route("/index", get(handlers::get_index))
+        .route("/log", get(handlers::get_log))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             require_auth,

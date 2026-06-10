@@ -97,6 +97,116 @@ pub struct HealthResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct CreateProjectReq {
+    pub key: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateProjectReq {
+    pub name: Option<String>,
+    pub description: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Tickets
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTicketReq {
+    pub project_key: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub assignee: Option<String>,
+    pub parent_identifier: Option<String>,
+    pub cycle_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateTicketReq {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub assignee: Option<String>,
+    pub parent_identifier: Option<String>,
+    pub cycle_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListTicketsQuery {
+    pub project: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub assignee: Option<String>,
+    pub cycle_id: Option<String>,
+    pub parent: Option<String>,
+    pub limit: Option<i64>,
+}
+
+// ---------------------------------------------------------------------------
+// Comments
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct AddCommentReq {
+    pub author: Option<String>,
+    pub body: String,
+}
+
+// ---------------------------------------------------------------------------
+// Relations
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct AddRelationReq {
+    pub from_identifier: String,
+    pub to_identifier: String,
+    pub relation_type: String,
+}
+
+// ---------------------------------------------------------------------------
+// Cycles
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCycleReq {
+    pub name: String,
+    pub starts_at: Option<String>,
+    pub ends_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCycleReq {
+    pub name: Option<String>,
+    pub starts_at: Option<String>,
+    pub ends_at: Option<String>,
+}
+
+// ---------------------------------------------------------------------------
+// Search + Log
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+pub struct SearchQuery {
+    pub q: String,
+    pub limit: Option<i64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LogQuery {
+    pub since: Option<String>,
+    pub limit: Option<i64>,
+}
+
+// ---------------------------------------------------------------------------
 // Validation helpers
 // ---------------------------------------------------------------------------
 
