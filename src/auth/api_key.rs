@@ -1,6 +1,6 @@
 //! API key generation + SHA-256 hash storage.
 //!
-//! API key format: `mnemo_<32 base62 chars>`. The plaintext is shown exactly
+//! API key format: `lineagent_<32 base62 chars>`. The plaintext is shown exactly
 //! once at creation and never persisted. The DB stores only the hex-encoded
 //! SHA-256 hash.
 
@@ -16,13 +16,13 @@ pub struct ApiKey {
     pub id: String,
     /// User-friendly label, e.g. "claude-dev-laptop".
     pub name: String,
-    /// Plaintext key, e.g. `mnemo_a1b2c3…`. Show this to the user once.
+    /// Plaintext key, e.g. `lineagent_a1b2c3…`. Show this to the user once.
     pub plaintext: String,
     /// SHA-256 hash of the plaintext, hex-encoded. Persist this.
     pub hash: String,
 }
 
-const PREFIX: &str = "mnemo_";
+const PREFIX: &str = "lineagent_";
 const BODY_LEN: usize = 32; // 32 base62 chars ≈ 190 bits of entropy
 
 const BASE62_ALPHABET: &[u8; 62] =
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn rejects_garbage() {
         assert!(!looks_like_api_key("not-a-key"));
-        assert!(!looks_like_api_key("mnemo_short"));
+        assert!(!looks_like_api_key("lineagent_short"));
         assert!(!looks_like_api_key("MNEMO_CAPS"));
     }
 
