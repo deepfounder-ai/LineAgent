@@ -132,7 +132,9 @@ Reused from mnemos unchanged: `users`, `api_keys`.
 | type | TEXT | `blocks | duplicates | relates_to` |
 | created_at | TEXT | |
 
-`UNIQUE(from_ticket_id, to_ticket_id, type)`.
+`UNIQUE(from_ticket_id, to_ticket_id, type)`. Indexes on `(user_id, from_ticket_id)`
+and `(user_id, to_ticket_id)` — `get_ticket` looks up relations in both
+directions, so the reverse edge needs its own index.
 
 **cycles**
 | col | type | notes |
@@ -179,7 +181,7 @@ concurrency. Cycles use the same pattern with `cycle_counter`.
 
 ## Surfaces
 
-### MCP tools (17)
+### MCP tools (19)
 
 | group | tools |
 |---|---|
@@ -187,9 +189,12 @@ concurrency. Cycles use the same pattern with `cycle_counter`.
 | comments | `add_comment`, `list_comments` |
 | relations | `add_relation`, `remove_relation` |
 | search | `search_tickets` (FTS5 over title+description) |
-| projects | `create_project`, `list_projects` |
+| projects | `create_project`, `get_project`, `update_project`, `list_projects` |
 | cycles | `create_cycle`, `update_cycle`, `list_cycles` |
 | misc | `get_log`, `get_index` |
+
+Three-surface parity is deliberate: every capability on REST/CLI has an MCP
+tool, hence `get_project` + `update_project` are present.
 
 - `get_ticket` returns the ticket plus its comments and relations inline.
 - `list_tickets` filters: `project`, `status`, `priority`, `assignee`,
