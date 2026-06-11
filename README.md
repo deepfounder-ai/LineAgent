@@ -1,79 +1,107 @@
 # LineAgent
 
-Self-hosted issue tracker for AI agents. Linear-for-agents: REST + MCP stdio + CLI over a single SQLite file.
+**Issue tracker built for AI agents, not humans.**
 
-## Features
+Modern AI agents (Claude, GPT, Cursor, AutoGPT, custom pipelines) need to plan work, track progress, and coordinate across tasks — but they have no native place to store this. They use markdown files, ad-hoc JSON, or nothing at all. Context gets lost between sessions. Parallel agents overwrite each other. There's no audit trail.
 
-- **REST API** — full CRUD for projects, tickets, comments, relations, cycles
-- **MCP stdio** — 19 tools for AI agents via JSON-RPC 2.0 (works with Claude, Cursor, etc.)
-- **CLI** — scripting and human use
-- **FTS5 full-text search** — BM25 ranked over ticket title + description
-- **Audit log** — append-only events table
-- **Per-user tenancy** — all data scoped to authenticated user
+LineAgent solves this: a lightweight, self-hosted issue tracker that AI agents can read and write natively via **MCP** (Model Context Protocol). No browser required. No SaaS. Just a single binary and a SQLite file.
+
+---
+
+## What it is
+
+- **Projects** with short keys (`LIN`, `API`, `INFRA`)
+- **Tickets** with auto-incremented identifiers (`LIN-1`, `LIN-2`, …), status, priority, assignee, parent, cycle
+- **Comments** — agents leave notes on tickets (with author field for multi-agent traceability)
+- **Relations** — `blocks`, `duplicates`, `relates_to` between tickets
+- **Cycles** — sprints / iterations for planning
+- **Full-text search** — BM25 over title + description (FTS5)
+- **Audit log** — append-only event stream, queryable by agents
+- **Per-user tenancy** — multiple users, each with their own projects and data
+
+## Three surfaces, one binary
+
+```
+lineagent serve     # HTTP REST API — for integrations, dashboards, webhooks
+lineagent mcp       # MCP stdio — for Claude, Cursor, and any MCP-compatible agent
+lineagent <cmd>     # CLI — for humans and shell scripts
+```
+
+All three surfaces talk to the same SQLite database. One binary, no dependencies.
+
+## Why not Linear / Jira / GitHub Issues?
+
+| | LineAgent | Linear / Jira |
+|---|---|---|
+| Self-hosted | ✓ | ✗ |
+| MCP native | ✓ | ✗ |
+| Works offline | ✓ | ✗ |
+| No rate limits | ✓ | ✗ |
+| Agent-readable audit log | ✓ | ✗ |
+| Single file data store | ✓ | ✗ |
+| Pretty UI | ✗ | ✓ |
+
+LineAgent is not a replacement for Linear when humans are the primary users. It is the right tool when **agents are the primary users** and humans observe.
+
+---
 
 ## Quickstart
 
-### 1. Build
+### Docker (fastest)
+
+```bash
+docker run -p 8080:8080 -v lineagent-data:/data \
+  ghcr.io/deepfounder-ai/lineagent:latest
+```
+
+### From source
 
 ```bash
 cargo build --release
-# binary at target/release/lineagent
+
+# register a user
+./target/release/lineagent user register
+
+# create an API key
+./target/release/lineagent keys create --name agent
+# → lineagent_abc123…
+
+export LINEAGENT_API_URL=http://localhost:8080
+export LINEAGENT_API_KEY=lineagent_abc123…
+
+# start the server
+./target/release/lineagent serve
 ```
 
-### 2. Register a user
+### Use via CLI
 
 ```bash
-lineagent user register
-# prompts for username + password; prints "Registered."
-```
+lineagent project create LIN --name "My Agent Project"
 
-### 3. Create an API key
-
-```bash
-lineagent keys create --name agent
-# prints key: lineagent_…
-export LINEAGENT_API_KEY=lineagent_…
-```
-
-### 4. Start the server
-
-```bash
-lineagent serve
-# listening on 0.0.0.0:8080 by default
-```
-
-### 5. Use the CLI
-
-```bash
-# create a project
-lineagent project create LIN --name "LineAgent"
-
-# create a ticket
-lineagent ticket create LIN --title "First ticket"
+lineagent ticket create LIN --title "Research competitors" --priority high
 # → LIN-1
 
-# list tickets
-lineagent ticket list --project LIN
-
-# update a ticket
 lineagent ticket update LIN-1 --status in_progress
 
-# full-text search
-lineagent search "first ticket"
+lineagent ticket create LIN --title "Write report" --parent LIN-1
+# → LIN-2
 
-# project index (status counts)
-lineagent index
+lineagent search "competitor"
+lineagent index        # status counts per project
+lineagent log          # audit trail
 ```
 
-## MCP Configuration (Claude Desktop)
+---
 
-Add to your `claude_desktop_config.json`:
+## Connect to Claude (MCP)
+
+Add to `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "lineagent": {
-      "command": "/usr/local/bin/lineagent",
+      "command": "lineagent",
       "args": ["mcp"],
       "env": {
         "LINEAGENT_API_URL": "http://localhost:8080",
@@ -84,25 +112,33 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-The MCP process connects to a running `lineagent serve` instance. `LINEAGENT_API_KEY` is never written to stdout — MCP stdout is a clean JSON-RPC stream.
+Claude now has 19 tools: `create_ticket`, `update_ticket`, `list_tickets`, `search_tickets`, `add_comment`, `get_log`, `get_index`, and more. Agents can plan, track, and coordinate work across sessions.
 
-## Environment Variables
+---
+
+## Deploy on EasyPanel
+
+1. `New Service → App → From Template → Import URL`
+2. Paste: `https://raw.githubusercontent.com/deepfounder-ai/LineAgent/main/easypanel.json`
+3. Set project name → Deploy
+
+---
+
+## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `LINEAGENT_HOST` | `127.0.0.1` | Server bind address |
-| `LINEAGENT_PORT` | `8080` | Server port |
-| `LINEAGENT_DATA_DIR` | `./data` | Directory for `lineagent.db` |
-| `LINEAGENT_API_URL` | `http://localhost:8080` | CLI / MCP target |
+| `LINEAGENT_HOST` | `0.0.0.0` | Server bind address |
+| `LINEAGENT_PORT` | `3000` | Server port |
+| `LINEAGENT_DATA_DIR` | `/data` | SQLite database directory |
+| `LINEAGENT_API_URL` | `http://localhost:3000` | CLI / MCP target URL |
 | `LINEAGENT_API_KEY` | — | Authentication key |
 | `LINEAGENT_CONFIG` | `~/.config/lineagent/config.toml` | Config file path |
 
-## Docker
+---
 
-```bash
-docker run -p 8080:8080 -v lineagent-data:/data \
-  -e LINEAGENT_API_KEY=lineagent_… \
-  ghcr.io/your-org/lineagent:latest
-```
+## Reference docs
 
-See [docs/api.md](docs/api.md), [docs/mcp.md](docs/mcp.md), [docs/cli.md](docs/cli.md) for full reference.
+- [docs/api.md](docs/api.md) — REST API endpoints + curl examples
+- [docs/mcp.md](docs/mcp.md) — 19 MCP tools + JSON examples
+- [docs/cli.md](docs/cli.md) — CLI command table + exit codes
