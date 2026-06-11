@@ -44,7 +44,7 @@ async fn insert_test_ticket(
         .await
         .unwrap();
     let tid = uuid::Uuid::now_v7().to_string();
-    let num: i64 = identifier.split('-').last().unwrap().parse().unwrap();
+    let num: i64 = identifier.split('-').next_back().unwrap().parse().unwrap();
     let ticket = ticket_repo::insert(
         pool, &tid, "user1", &pid, num, identifier, title, None, "backlog", "medium", None, None,
         None,
@@ -60,8 +60,19 @@ async fn insert_and_get_by_identifier() {
     let id = uuid::Uuid::now_v7().to_string();
 
     ticket_repo::insert(
-        &pool, &id, "user1", "proj1", 1, "LIN-1", "Fix the bug",
-        None, "backlog", "medium", None, None, None,
+        &pool,
+        &id,
+        "user1",
+        "proj1",
+        1,
+        "LIN-1",
+        "Fix the bug",
+        None,
+        "backlog",
+        "medium",
+        None,
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -83,15 +94,37 @@ async fn list_with_status_filter() {
     let id2 = uuid::Uuid::now_v7().to_string();
 
     ticket_repo::insert(
-        &pool, &id1, "user1", "proj1", 1, "LIN-1", "Backlog ticket",
-        None, "backlog", "medium", None, None, None,
+        &pool,
+        &id1,
+        "user1",
+        "proj1",
+        1,
+        "LIN-1",
+        "Backlog ticket",
+        None,
+        "backlog",
+        "medium",
+        None,
+        None,
+        None,
     )
     .await
     .unwrap();
 
     ticket_repo::insert(
-        &pool, &id2, "user1", "proj1", 2, "LIN-2", "Done ticket",
-        None, "done", "medium", None, None, None,
+        &pool,
+        &id2,
+        "user1",
+        "proj1",
+        2,
+        "LIN-2",
+        "Done ticket",
+        None,
+        "done",
+        "medium",
+        None,
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -113,8 +146,19 @@ async fn update_ticket() {
     let id = uuid::Uuid::now_v7().to_string();
 
     ticket_repo::insert(
-        &pool, &id, "user1", "proj1", 1, "LIN-1", "Original title",
-        None, "backlog", "medium", None, None, None,
+        &pool,
+        &id,
+        "user1",
+        "proj1",
+        1,
+        "LIN-1",
+        "Original title",
+        None,
+        "backlog",
+        "medium",
+        None,
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -140,8 +184,19 @@ async fn delete_ticket() {
     let id = uuid::Uuid::now_v7().to_string();
 
     ticket_repo::insert(
-        &pool, &id, "user1", "proj1", 1, "LIN-1", "To be deleted",
-        None, "backlog", "medium", None, None, None,
+        &pool,
+        &id,
+        "user1",
+        "proj1",
+        1,
+        "LIN-1",
+        "To be deleted",
+        None,
+        "backlog",
+        "medium",
+        None,
+        None,
+        None,
     )
     .await
     .unwrap();
@@ -213,8 +268,7 @@ async fn list_with_multi_filter() {
     let (p, _) = insert_test_ticket(&pool, "LIN-1", "Ticket A").await;
     let id2 = uuid::Uuid::now_v7().to_string();
     ticket_repo::insert(
-        &pool, &id2, "user1", &p.id, 2, "LIN-2", "Ticket B", None, "done", "high", None, None,
-        None,
+        &pool, &id2, "user1", &p.id, 2, "LIN-2", "Ticket B", None, "done", "high", None, None, None,
     )
     .await
     .unwrap();

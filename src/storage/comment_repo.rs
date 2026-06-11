@@ -51,7 +51,7 @@ pub async fn insert(
     .bind(&now)
     .execute(pool)
     .await
-    .map_err(|e| AppError::Db(e))?;
+    .map_err(AppError::Db)?;
 
     Ok(CommentRow {
         id: id.to_string(),

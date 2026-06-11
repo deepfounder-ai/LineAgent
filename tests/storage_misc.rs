@@ -34,7 +34,7 @@ async fn setup() -> sqlx::SqlitePool {
 async fn seed_ticket(pool: &sqlx::SqlitePool, identifier: &str) -> (String, String) {
     let project_id = "proj1".to_string();
     let ticket_id = uuid::Uuid::now_v7().to_string();
-    let number: i64 = identifier.split('-').last().unwrap().parse().unwrap();
+    let number: i64 = identifier.split('-').next_back().unwrap().parse().unwrap();
     ticket_repo::insert(
         pool,
         &ticket_id,
@@ -67,9 +67,16 @@ async fn comment_add_and_list() {
     let id1 = uuid::Uuid::now_v7().to_string();
     let id2 = uuid::Uuid::now_v7().to_string();
 
-    comment_repo::insert(&pool, &id1, "user1", &ticket_id, Some("agent"), "First comment")
-        .await
-        .unwrap();
+    comment_repo::insert(
+        &pool,
+        &id1,
+        "user1",
+        &ticket_id,
+        Some("agent"),
+        "First comment",
+    )
+    .await
+    .unwrap();
     comment_repo::insert(&pool, &id2, "user1", &ticket_id, None, "Second comment")
         .await
         .unwrap();
@@ -107,7 +114,10 @@ async fn comment_list_ordered_asc() {
 
     assert_eq!(comments.len(), 2);
     assert_eq!(comments[0].body, "First");
-    assert_eq!(comments[1].body, "Second", "second comment body should come last in ASC order");
+    assert_eq!(
+        comments[1].body, "Second",
+        "second comment body should come last in ASC order"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -226,14 +236,23 @@ async fn cycle_insert_list_update() {
         .expect("cycle should exist");
     assert_eq!(updated.name, "Sprint 1 Updated");
     // starts_at unchanged via COALESCE.
-    assert_eq!(updated.starts_at.as_deref(), Some("2024-01-01T00:00:00+00:00"));
+    assert_eq!(
+        updated.starts_at.as_deref(),
+        Some("2024-01-01T00:00:00+00:00")
+    );
 }
 
 #[tokio::test]
 async fn cycle_update_returns_not_found() {
     let pool = setup().await;
-    let err = cycle_repo::update(&pool, "ghost-id", Some("x"), None, None).await.unwrap_err();
-    assert!(matches!(err, lineagent::error::AppError::NotFound(_)), "expected NotFound, got {:?}", err);
+    let err = cycle_repo::update(&pool, "ghost-id", Some("x"), None, None)
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(err, lineagent::error::AppError::NotFound(_)),
+        "expected NotFound, got {:?}",
+        err
+    );
 }
 
 #[tokio::test]

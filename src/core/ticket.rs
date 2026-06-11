@@ -5,14 +5,17 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{AppError, Result};
-use crate::storage::{comment_repo, event_repo, project_repo, relation_repo, ticket_repo, AppState};
+use crate::storage::{
+    comment_repo, event_repo, project_repo, relation_repo, ticket_repo, AppState,
+};
 
 // ---------------------------------------------------------------------------
 // Status
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Status {
+    #[default]
     Backlog,
     Todo,
     InProgress,
@@ -32,10 +35,6 @@ impl Status {
             Self::Cancelled => "cancelled",
         }
     }
-}
-
-impl Default for Status {
-    fn default() -> Self { Self::Backlog }
 }
 
 impl FromStr for Status {
@@ -76,10 +75,11 @@ impl<'de> Deserialize<'de> for Status {
 // Priority
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum Priority {
     Critical,
     High,
+    #[default]
     Medium,
     Low,
 }
@@ -93,10 +93,6 @@ impl Priority {
             Self::Low => "low",
         }
     }
-}
-
-impl Default for Priority {
-    fn default() -> Self { Self::Medium }
 }
 
 impl FromStr for Priority {

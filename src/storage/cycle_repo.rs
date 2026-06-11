@@ -36,6 +36,7 @@ impl CycleRow {
 }
 
 /// Insert a new cycle and return the inserted row.
+#[allow(clippy::too_many_arguments)]
 pub async fn insert(
     pool: &SqlitePool,
     id: &str,
@@ -62,7 +63,7 @@ pub async fn insert(
     .bind(&now)
     .execute(pool)
     .await
-    .map_err(|e| AppError::Db(e))?;
+    .map_err(AppError::Db)?;
 
     Ok(CycleRow {
         id: id.to_string(),
