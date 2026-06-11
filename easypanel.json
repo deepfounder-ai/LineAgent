@@ -1,0 +1,57 @@
+{
+  "$schema": "https://schema.easypanel.io/template",
+  "name": "lineagent",
+  "title": "LineAgent",
+  "description": "Self-hosted issue tracker for AI agents. REST + MCP stdio + CLI over a single SQLite file.",
+  "logo": "https://raw.githubusercontent.com/deepfounder-ai/LineAgent/main/docs/logo.png",
+  "links": [
+    { "label": "GitHub", "url": "https://github.com/deepfounder-ai/LineAgent" },
+    { "label": "Docs", "url": "https://github.com/deepfounder-ai/LineAgent/tree/main/docs" }
+  ],
+  "tags": ["productivity", "ai", "developer-tools", "project-management"],
+  "instructions": "After deployment:\n1. Open the app URL\n2. Run: `lineagent user register` via the CLI or POST /api/v1/auth/register\n3. Create an API key: POST /api/v1/auth/keys\n4. Set LINEAGENT_API_KEY in your MCP client config\n\nHealth check: GET /healthz",
+  "services": [
+    {
+      "type": "app",
+      "data": {
+        "projectName": "$(project_name)",
+        "serviceName": "lineagent",
+        "source": {
+          "type": "github",
+          "owner": "deepfounder-ai",
+          "repo": "LineAgent",
+          "ref": "main",
+          "buildPath": "/"
+        },
+        "build": {
+          "type": "dockerfile",
+          "dockerfile": "Dockerfile"
+        },
+        "env": "LINEAGENT_HOST=0.0.0.0\nLINEAGENT_PORT=3000\nLINEAGENT_DATA_DIR=/data\nLINEAGENT_LOG=info",
+        "domains": [
+          {
+            "host": "$(EASYPANEL_DOMAIN)",
+            "port": 3000
+          }
+        ],
+        "mounts": [
+          {
+            "type": "volume",
+            "name": "data",
+            "mountPath": "/data"
+          }
+        ],
+        "deploy": {
+          "replicas": 1,
+          "command": "serve",
+          "zeroDowntime": false
+        },
+        "healthCheck": {
+          "enabled": true,
+          "path": "/healthz",
+          "port": 3000
+        }
+      }
+    }
+  ]
+}
