@@ -90,11 +90,17 @@ pub async fn run(cmd: &TicketCmd, cfg: &CliConfig, json: bool) -> CliResult<()> 
             title,
             status,
             priority,
+            description,
+            assignee,
+            parent_identifier,
         } => {
             let body = serde_json::json!({
                 "title": title,
                 "status": status,
                 "priority": priority,
+                "description": description,
+                "assignee": assignee,
+                "parent_identifier": parent_identifier,
             });
             let t: serde_json::Value =
                 client.patch(&format!("/api/v1/tickets/{id}"), &body).await?;

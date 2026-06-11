@@ -2,13 +2,18 @@
 
 use crate::cli::client::Client;
 use crate::cli::config::CliConfig;
-use crate::cli::output::{print_json, print_line, CliResult};
+use crate::cli::output::{print_json, print_line, CliError, CliResult};
 use crate::cli::CycleCmd;
 
 pub async fn run(cmd: &CycleCmd, cfg: &CliConfig, json: bool) -> CliResult<()> {
     let client = Client::new(cfg)?;
     match cmd {
         CycleCmd::List { project } => {
+            let Some(project) = project else {
+                return Err(CliError::Other(
+                    "project key required; use --project KEY".to_string(),
+                ));
+            };
             let cycles: serde_json::Value = client
                 .get(&format!("/api/v1/projects/{project}/cycles"))
                 .await?;

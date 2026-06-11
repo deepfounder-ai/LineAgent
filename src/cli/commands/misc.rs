@@ -62,7 +62,7 @@ pub async fn run_search(
     cfg: &CliConfig,
 ) -> CliResult<()> {
     let client = Client::new(cfg)?;
-    // Use the `url` crate for percent-encoding so we don't need an extra dep.
+    // Simple percent-encoding for query string values.
     let encoded = url_encode(query);
     let mut path = format!("/api/v1/search?q={encoded}");
     if let Some(l) = limit {

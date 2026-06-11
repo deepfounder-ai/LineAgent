@@ -189,6 +189,9 @@ async fn cli_ticket_crud() {
             title: None,
             status: Some("done".to_string()),
             priority: None,
+            description: None,
+            assignee: None,
+            parent_identifier: None,
         },
         &cfg,
         false
@@ -348,7 +351,7 @@ async fn cli_cycle_flow() {
     // List cycles
     ok!(cycles::run(
         &CycleCmd::List {
-            project: "LIN".to_string(),
+            project: Some("LIN".to_string()),
         },
         &cfg,
         true

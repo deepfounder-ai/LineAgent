@@ -232,6 +232,15 @@ pub enum TicketCmd {
         /// New priority.
         #[arg(long)]
         priority: Option<String>,
+        /// New description.
+        #[arg(long)]
+        description: Option<String>,
+        /// New assignee username or ID.
+        #[arg(long)]
+        assignee: Option<String>,
+        /// New parent ticket identifier.
+        #[arg(long, name = "parent")]
+        parent_identifier: Option<String>,
     },
     /// Delete a ticket.
     Delete {
@@ -304,7 +313,7 @@ pub enum CycleCmd {
     List {
         /// Project key.
         #[arg(long)]
-        project: String,
+        project: Option<String>,
     },
     /// Create a new cycle.
     Create {
