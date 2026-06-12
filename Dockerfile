@@ -1,31 +1,25 @@
 # syntax=docker/dockerfile:1
 
 # ---- build stage -----------------------------------------------------------
-# Full rust image: it ships gcc, which `libsqlite3-sys` (bundled SQLite)
-# needs to compile.
 FROM rust:1.85-bookworm AS builder
 WORKDIR /app
 
-# Prime the dependency cache: copy manifests first, build a dummy target, then
-# copy the real sources. This keeps `cargo build` cached across source-only
-# changes.
+# Prime dependency cache: copy manifests, build dummy target, then real sources.
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir -p src \
     && echo 'fn main() {}' > src/main.rs \
     && echo '' > src/lib.rs \
-    && cargo build --release --locked --quiet || true \
-    && rm -rf src
+    && cargo build --release --locked --quiet; \
+       rm -rf src
 
 COPY . .
-# Touch sources so cargo rebuilds them after the dummy build above.
-RUN cargo build --release --locked \
-    && strip target/release/lineagent || true
+RUN touch src/main.rs src/lib.rs \
+    && cargo build --release --locked \
+    && strip target/release/lineagent
 
 # ---- runtime stage ---------------------------------------------------------
 FROM debian:bookworm-slim AS runtime
 
-# ca-certificates lets the binary reach https origins; curl powers the
-# container HEALTHCHECK. Everything else is stripped.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/* \
