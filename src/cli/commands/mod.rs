@@ -15,6 +15,7 @@
 
 pub mod comments;
 pub mod cycles;
+pub mod import;
 pub mod keys;
 pub mod misc;
 pub mod projects;
@@ -73,13 +74,10 @@ async fn dispatch(cli: Cli) -> CliResult<()> {
         Cmd::Comment(c) => comments::run(&c, &config, json).await,
         Cmd::Relation(r) => relations::run(&r, &config, json).await,
         Cmd::Cycle(c) => cycles::run(&c, &config, json).await,
-        Cmd::Search { query, limit } => {
-            misc::run_search(&query, limit, &config).await
-        }
+        Cmd::Search { query, limit } => misc::run_search(&query, limit, &config).await,
         Cmd::Index => misc::run_index(&config).await,
-        Cmd::Log { since, limit } => {
-            misc::run_log(since.as_deref(), limit, &config).await
-        }
+        Cmd::Log { since, limit } => misc::run_log(since.as_deref(), limit, &config).await,
+        Cmd::Import(i) => import::run(&i, &config).await,
     }
 }
 

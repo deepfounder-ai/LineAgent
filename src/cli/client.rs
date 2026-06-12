@@ -103,6 +103,25 @@ impl Client {
         self.request(Method::GET, path, None::<&()>).await
     }
 
+    /// `GET <path>` returning `None` on 404, `Err` on other failures.
+    pub async fn get_opt<T: DeserializeOwned>(&self, path: &str) -> CliResult<Option<T>> {
+        let url = self.url_for(path);
+        let req = self.http.get(&url);
+        let req = self.apply_auth(req)?;
+        let resp = req.send().await?;
+        if resp.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+        if !resp.status().is_success() {
+            return Err(self.parse_error(resp).await);
+        }
+        let bytes = resp.bytes().await?;
+        if bytes.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(serde_json::from_slice(&bytes)?))
+    }
+
     /// Convenience: `POST <path>` with a JSON body.
     pub async fn post<T: DeserializeOwned, B: Serialize>(
         &self,
@@ -268,10 +287,19 @@ mod tests {
     #[test]
     fn url_for_joins_correctly() {
         let c = Client::new(&cfg("http://h:8080", None)).unwrap();
-        assert_eq!(c.url_for("/api/v1/auth/whoami"), "http://h:8080/api/v1/auth/whoami");
-        assert_eq!(c.url_for("api/v1/auth/whoami"), "http://h:8080/api/v1/auth/whoami");
+        assert_eq!(
+            c.url_for("/api/v1/auth/whoami"),
+            "http://h:8080/api/v1/auth/whoami"
+        );
+        assert_eq!(
+            c.url_for("api/v1/auth/whoami"),
+            "http://h:8080/api/v1/auth/whoami"
+        );
         let c2 = Client::new(&cfg("http://h:8080/", None)).unwrap();
-        assert_eq!(c2.url_for("/api/v1/auth/whoami"), "http://h:8080/api/v1/auth/whoami");
+        assert_eq!(
+            c2.url_for("/api/v1/auth/whoami"),
+            "http://h:8080/api/v1/auth/whoami"
+        );
     }
 
     #[test]

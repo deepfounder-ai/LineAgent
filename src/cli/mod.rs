@@ -92,6 +92,29 @@ pub enum Cmd {
         #[arg(long)]
         limit: Option<i64>,
     },
+    /// Import data from external sources.
+    #[command(subcommand)]
+    Import(ImportCmd),
+}
+
+// ---------------------------------------------------------------------------
+// Import
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Subcommand)]
+pub enum ImportCmd {
+    /// Import all issues from a Linear workspace into LineAgent.
+    Linear {
+        /// Linear personal API key (overrides LINEAGENT_LINEAR_API_KEY).
+        #[arg(long)]
+        linear_key: Option<String>,
+        /// Only import these team keys (repeatable). Imports all teams if omitted.
+        #[arg(long = "team")]
+        teams: Vec<String>,
+        /// Dry-run: fetch from Linear and print what would be created, but don't write anything.
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 // ---------------------------------------------------------------------------
