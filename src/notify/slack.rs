@@ -11,6 +11,7 @@ pub fn notify(config: Arc<Config>, text: String) {
         _ => return,
     };
 
+    tracing::info!(channel = %channel, "slack: sending notification");
     tokio::spawn(async move {
         let client = reqwest::Client::new();
         let body = serde_json::json!({
@@ -26,9 +27,14 @@ pub fn notify(config: Arc<Config>, text: String) {
         {
             Err(e) => tracing::warn!(error = %e, "slack notification failed (transport)"),
             Ok(resp) => {
-                if let Ok(v) = resp.json::<serde_json::Value>().await {
-                    if v["ok"] != true {
-                        tracing::warn!(error = %v["error"], "slack notification failed (api)");
+                match resp.json::<serde_json::Value>().await {
+                    Err(e) => tracing::warn!(error = %e, "slack notification failed (parse)"),
+                    Ok(v) => {
+                        if v["ok"] == true {
+                            tracing::info!("slack notification sent ok");
+                        } else {
+                            tracing::warn!(error = %v["error"], "slack notification failed (api)");
+                        }
                     }
                 }
             }
