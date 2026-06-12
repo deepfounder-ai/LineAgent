@@ -361,7 +361,15 @@ impl TicketService {
         // 7. Append event
         event_repo::append(db, user_id, "ticket.create", Some(&identifier), None).await?;
 
-        Ok(Ticket::from(row))
+        let ticket = Ticket::from(row);
+        crate::notify::slack::notify(
+            self.state.config.clone(),
+            format!(
+                "*[{}]* created: *{}* — {} / {}",
+                ticket.identifier, ticket.title, ticket.status, ticket.priority
+            ),
+        );
+        Ok(ticket)
     }
 
     pub async fn get(&self, user_id: &str, identifier: &str) -> Result<TicketView> {
@@ -496,7 +504,17 @@ impl TicketService {
             .await?
             .ok_or_else(|| AppError::Internal("updated ticket not found".into()))?;
 
-        Ok(Ticket::from(updated))
+        let ticket = Ticket::from(updated);
+        let mut parts = vec![format!("*[{}]* updated: *{}*", ticket.identifier, ticket.title)];
+        parts.push(format!("status: {}", ticket.status));
+        if let Some(ref a) = ticket.assignee {
+            parts.push(format!("assignee: {a}"));
+        }
+        crate::notify::slack::notify(
+            self.state.config.clone(),
+            parts.join(" | "),
+        );
+        Ok(ticket)
     }
 
     pub async fn delete(&self, user_id: &str, identifier: &str) -> Result<()> {

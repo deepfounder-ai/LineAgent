@@ -11,7 +11,7 @@ LineAgent exposes 19 tools via MCP stdio JSON-RPC 2.0. The `lineagent mcp` subco
       "command": "lineagent",
       "args": ["mcp"],
       "env": {
-        "LINEAGENT_API_URL": "http://localhost:8080",
+        "LINEAGENT_API_URL": "http://localhost:3000",
         "LINEAGENT_API_KEY": "lineagent_your_key_here"
       }
     }

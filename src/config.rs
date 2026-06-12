@@ -35,6 +35,14 @@ pub struct Config {
     /// Leave unset to allow open registration.
     #[serde(default)]
     pub registration_secret: Option<String>,
+
+    /// Slack bot token (`xoxb-…`). If set, ticket events are posted to Slack.
+    #[serde(default)]
+    pub slack_token: Option<String>,
+
+    /// Slack channel to post ticket events to (e.g. `#lineagent`).
+    #[serde(default)]
+    pub slack_channel: Option<String>,
 }
 
 fn default_host() -> String {
@@ -71,6 +79,8 @@ impl Config {
             .unwrap_or_else(|_| default_log_filter());
 
         let registration_secret = std::env::var("LINEAGENT_SECRET").ok();
+        let slack_token = std::env::var("LINEAGENT_SLACK_TOKEN").ok();
+        let slack_channel = std::env::var("LINEAGENT_SLACK_CHANNEL").ok();
 
         Ok(Self {
             host,
@@ -79,6 +89,8 @@ impl Config {
             db_url,
             log_filter,
             registration_secret,
+            slack_token,
+            slack_channel,
         })
     }
 
@@ -92,6 +104,8 @@ impl Config {
             db_url: String::new(),
             log_filter: "warn".to_string(),
             registration_secret: None,
+            slack_token: None,
+            slack_channel: None,
         }
     }
 

@@ -50,7 +50,8 @@ LineAgent is not a replacement for Linear when humans are the primary users. It 
 ### Docker (fastest)
 
 ```bash
-docker run -p 8080:8080 -v lineagent-data:/data \
+docker run -p 3000:3000 -v lineagent-data:/data \
+  -e LINEAGENT_SECRET=your_secret \
   ghcr.io/deepfounder-ai/lineagent:latest
 ```
 
@@ -66,7 +67,7 @@ cargo build --release
 ./target/release/lineagent keys create --name agent
 # → lineagent_abc123…
 
-export LINEAGENT_API_URL=http://localhost:8080
+export LINEAGENT_API_URL=http://localhost:3000
 export LINEAGENT_API_KEY=lineagent_abc123…
 
 # start the server
@@ -104,7 +105,7 @@ Add to `claude_desktop_config.json`:
       "command": "lineagent",
       "args": ["mcp"],
       "env": {
-        "LINEAGENT_API_URL": "http://localhost:8080",
+        "LINEAGENT_API_URL": "http://localhost:3000",
         "LINEAGENT_API_KEY": "lineagent_your_key_here"
       }
     }
@@ -131,8 +132,11 @@ Claude now has 19 tools: `create_ticket`, `update_ticket`, `list_tickets`, `sear
 | `LINEAGENT_HOST` | `0.0.0.0` | Server bind address |
 | `LINEAGENT_PORT` | `3000` | Server port |
 | `LINEAGENT_DATA_DIR` | `/data` | SQLite database directory |
+| `LINEAGENT_SECRET` | — | If set, registration requires this secret in the request body |
+| `LINEAGENT_SLACK_TOKEN` | — | Slack bot token (`xoxb-…`) — enables Slack notifications |
+| `LINEAGENT_SLACK_CHANNEL` | — | Slack channel to post ticket events to (e.g. `#lineagent`) |
 | `LINEAGENT_API_URL` | `http://localhost:3000` | CLI / MCP target URL |
-| `LINEAGENT_API_KEY` | — | Authentication key |
+| `LINEAGENT_API_KEY` | — | Authentication key (client-side) |
 | `LINEAGENT_CONFIG` | `~/.config/lineagent/config.toml` | Config file path |
 
 ---

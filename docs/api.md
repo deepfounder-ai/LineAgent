@@ -1,6 +1,6 @@
 # LineAgent REST API Reference
 
-Base URL: `http://localhost:8080/api/v1`
+Base URL: `http://localhost:3000/api/v1`
 
 All protected endpoints require `Authorization: Bearer <LINEAGENT_API_KEY>`.
 
@@ -19,8 +19,16 @@ All protected endpoints require `Authorization: Bearer <LINEAGENT_API_KEY>`.
 
 ### Register
 
+If `LINEAGENT_SECRET` is set on the server, the `secret` field is required.
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
+# server has LINEAGENT_SECRET set
+curl -X POST http://localhost:3000/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"agent","password":"s3cr3t","secret":"your_secret"}'
+
+# open registration (no LINEAGENT_SECRET)
+curl -X POST http://localhost:3000/api/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"username":"agent","password":"s3cr3t"}'
 ```
@@ -29,10 +37,12 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 {"id":"01932...","username":"agent","created_at":"2026-06-10T12:00:00Z"}
 ```
 
+Returns `403 Forbidden` if secret is wrong or missing when required.
+
 ### Login
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:3000/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"agent","password":"s3cr3t"}'
 ```
@@ -55,7 +65,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ### Create project
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/projects \
+curl -X POST http://localhost:3000/api/v1/projects \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"key":"LIN","name":"LineAgent","description":"Main project"}'
@@ -97,7 +107,7 @@ Query parameters for `GET /tickets`:
 ### Create ticket
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/tickets \
+curl -X POST http://localhost:3000/api/v1/tickets \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"project_key":"LIN","title":"Implement auth","status":"backlog","priority":"high"}'
@@ -123,7 +133,7 @@ curl -X POST http://localhost:8080/api/v1/tickets \
 ### Update ticket
 
 ```bash
-curl -X PATCH http://localhost:8080/api/v1/tickets/01932... \
+curl -X PATCH http://localhost:3000/api/v1/tickets/01932... \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"status":"done"}'
@@ -139,7 +149,7 @@ curl -X PATCH http://localhost:8080/api/v1/tickets/01932... \
 | `POST` | `/tickets/:id/comments` | ✓ | Add comment |
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/tickets/01932.../comments \
+curl -X POST http://localhost:3000/api/v1/tickets/01932.../comments \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"body":"Fixed in commit abc123","author":"agent"}'
@@ -158,7 +168,7 @@ curl -X POST http://localhost:8080/api/v1/tickets/01932.../comments \
 Relation types: `blocks`, `duplicates`, `relates_to`
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/relations \
+curl -X POST http://localhost:3000/api/v1/relations \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"from_identifier":"LIN-1","to_identifier":"LIN-2","relation_type":"blocks"}'
@@ -175,7 +185,7 @@ curl -X POST http://localhost:8080/api/v1/relations \
 | `PATCH` | `/cycles/:id` | ✓ | Update cycle |
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/projects/LIN/cycles \
+curl -X POST http://localhost:3000/api/v1/projects/LIN/cycles \
   -H 'Authorization: Bearer lineagent_...' \
   -H 'Content-Type: application/json' \
   -d '{"name":"Sprint 1","starts_at":"2026-06-01T00:00:00Z","ends_at":"2026-06-14T23:59:59Z"}'
@@ -192,7 +202,7 @@ GET /search?q=<query>&limit=<n>
 Full-text BM25 search over ticket titles and descriptions. Returns snippets with highlights.
 
 ```bash
-curl 'http://localhost:8080/api/v1/search?q=auth+middleware' \
+curl 'http://localhost:3000/api/v1/search?q=auth+middleware' \
   -H 'Authorization: Bearer lineagent_...'
 ```
 
@@ -267,3 +277,9 @@ Returns recent audit events (default limit 100).
 ```
 
 Error codes: `not_found`, `conflict`, `unauthorized`, `forbidden`, `unprocessable_entity`, `internal`.
+
+---
+
+## Slack integration
+
+Set `LINEAGENT_SLACK_TOKEN` (bot token, `xoxb-…`) and `LINEAGENT_SLACK_CHANNEL` (e.g. `#lineagent`) on the server to receive ticket create/update notifications in Slack. Both env vars must be set; either alone is ignored.
