@@ -49,9 +49,6 @@ pub enum AppError {
     #[error("serialization: {0}")]
     Serde(#[from] serde_json::Error),
 
-    #[error("yaml: {0}")]
-    Yaml(#[from] serde_yaml::Error),
-
     #[error("http: {0}")]
     Http(#[from] reqwest::Error),
 
@@ -83,7 +80,6 @@ impl AppError {
             | AppError::Db(_)
             | AppError::Migration(_)
             | AppError::Serde(_)
-            | AppError::Yaml(_)
             | AppError::Http(_)
             | AppError::Internal(_) => "internal",
         }
@@ -151,7 +147,6 @@ impl From<AppError> for ApiError {
             | AppError::Db(_)
             | AppError::Migration(_)
             | AppError::Serde(_)
-            | AppError::Yaml(_)
             | AppError::Http(_)
             | AppError::Internal(_) => axum::http::StatusCode::INTERNAL_SERVER_ERROR,
         };

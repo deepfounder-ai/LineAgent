@@ -2,7 +2,7 @@
 name = "lineagent"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.85"
 license = "Apache-2.0"
 description = "Issue tracker for AI agents — REST/MCP/CLI over SQLite"
 readme = "README.md"
@@ -41,7 +41,6 @@ sqlx = { version = "0.8", default-features = false, features = [
 # Serde / format
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml = "0.9"
 
 # Time / ids
 chrono = { version = "0.4", features = ["serde"] }
@@ -87,6 +86,4 @@ http-body-util = "0.1"
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-codegen-units = 1
 strip = "symbols"
