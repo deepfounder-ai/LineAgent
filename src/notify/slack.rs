@@ -17,14 +17,21 @@ pub fn notify(config: Arc<Config>, text: String) {
             "channel": channel,
             "text": text,
         });
-        if let Err(e) = client
+        match client
             .post("https://slack.com/api/chat.postMessage")
             .bearer_auth(&token)
             .json(&body)
             .send()
             .await
         {
-            tracing::warn!(error = %e, "slack notification failed");
+            Err(e) => tracing::warn!(error = %e, "slack notification failed (transport)"),
+            Ok(resp) => {
+                if let Ok(v) = resp.json::<serde_json::Value>().await {
+                    if v["ok"] != true {
+                        tracing::warn!(error = %v["error"], "slack notification failed (api)");
+                    }
+                }
+            }
         }
     });
 }
