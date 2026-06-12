@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build stage -----------------------------------------------------------
-FROM rust:1.85-bookworm AS builder
+FROM rust:1.86-bookworm AS builder
 WORKDIR /app
 
 # Prime dependency cache: copy manifests, build dummy target, then real sources.

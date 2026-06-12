@@ -2,7 +2,7 @@
 name = "lineagent"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.86"
 license = "Apache-2.0"
 description = "Issue tracker for AI agents — REST/MCP/CLI over SQLite"
 readme = "README.md"
