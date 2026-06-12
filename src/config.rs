@@ -30,6 +30,11 @@ pub struct Config {
     /// Log filter (overridden by `RUST_LOG` if set in the environment).
     #[serde(default = "default_log_filter")]
     pub log_filter: String,
+
+    /// If set, registration requires this secret in the request body.
+    /// Leave unset to allow open registration.
+    #[serde(default)]
+    pub registration_secret: Option<String>,
 }
 
 fn default_host() -> String {
@@ -65,12 +70,15 @@ impl Config {
             .or_else(|_| std::env::var("RUST_LOG"))
             .unwrap_or_else(|_| default_log_filter());
 
+        let registration_secret = std::env::var("LINEAGENT_SECRET").ok();
+
         Ok(Self {
             host,
             port,
             data_dir,
             db_url,
             log_filter,
+            registration_secret,
         })
     }
 
@@ -83,6 +91,7 @@ impl Config {
             data_dir,
             db_url: String::new(),
             log_filter: "warn".to_string(),
+            registration_secret: None,
         }
     }
 

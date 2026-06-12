@@ -133,6 +133,12 @@ pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> ApiResult<Response> {
+    if let Some(required) = &state.config.registration_secret {
+        match &req.secret {
+            Some(s) if s == required => {}
+            _ => return Err(AppError::Forbidden("invalid registration secret".into()).into()),
+        }
+    }
     validate_api_username(&req.username).map_err(unprocessable)?;
     validate_api_password(&req.password).map_err(unprocessable)?;
 
@@ -206,10 +212,7 @@ pub async fn revoke_key(
 // Projects
 // ---------------------------------------------------------------------------
 
-pub async fn list_projects(
-    State(state): State<AppState>,
-    ctx: AuthContext,
-) -> ApiResult<Response> {
+pub async fn list_projects(State(state): State<AppState>, ctx: AuthContext) -> ApiResult<Response> {
     let svc = ProjectService::new(state);
     let projects = svc.list(&ctx.user_id).await?;
     Ok(Json(projects).into_response())
@@ -222,7 +225,12 @@ pub async fn create_project(
 ) -> ApiResult<Response> {
     let svc = ProjectService::new(state);
     let project = svc
-        .create(&ctx.user_id, &req.key, &req.name, req.description.as_deref())
+        .create(
+            &ctx.user_id,
+            &req.key,
+            &req.name,
+            req.description.as_deref(),
+        )
         .await?;
     Ok((StatusCode::CREATED, Json(project)).into_response())
 }
@@ -245,7 +253,12 @@ pub async fn update_project(
 ) -> ApiResult<Response> {
     let svc = ProjectService::new(state);
     let project = svc
-        .update(&ctx.user_id, &key, req.name.as_deref(), req.description.as_deref())
+        .update(
+            &ctx.user_id,
+            &key,
+            req.name.as_deref(),
+            req.description.as_deref(),
+        )
         .await?;
     Ok(Json(project).into_response())
 }
@@ -468,10 +481,7 @@ pub async fn search_tickets(
     Ok(Json(json!({ "count": hits.len(), "hits": hits })).into_response())
 }
 
-pub async fn get_index(
-    State(state): State<AppState>,
-    ctx: AuthContext,
-) -> ApiResult<Response> {
+pub async fn get_index(State(state): State<AppState>, ctx: AuthContext) -> ApiResult<Response> {
     let svc = IndexService::new(state);
     let index = svc.build(&ctx.user_id).await?;
     Ok(Json(index).into_response())

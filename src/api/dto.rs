@@ -21,6 +21,7 @@ pub const MAX_BODY_BYTES: usize = 10 * 1024 * 1024; // 10 MB
 pub struct RegisterRequest {
     pub username: String,
     pub password: String,
+    pub secret: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -217,7 +218,9 @@ pub fn validate_api_username(name: &str) -> Result<(), String> {
 
 pub fn validate_api_password(pw: &str) -> Result<(), String> {
     if pw.len() < MIN_PASSWORD_LEN {
-        return Err(format!("password must be at least {MIN_PASSWORD_LEN} characters"));
+        return Err(format!(
+            "password must be at least {MIN_PASSWORD_LEN} characters"
+        ));
     }
     Ok(())
 }
@@ -228,7 +231,9 @@ pub fn validate_key_name(name: &str) -> Result<(), String> {
         return Err("key name must not be empty".into());
     }
     if trimmed.len() > MAX_KEY_NAME_LEN {
-        return Err(format!("key name must be at most {MAX_KEY_NAME_LEN} characters"));
+        return Err(format!(
+            "key name must be at most {MAX_KEY_NAME_LEN} characters"
+        ));
     }
     Ok(())
 }
