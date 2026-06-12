@@ -13,6 +13,7 @@
 //! - `tools/list`, `tools/call`
 //! - `resources/list`, `resources/read`
 
+pub mod proxy;
 pub mod resources;
 pub mod tools;
 
@@ -53,17 +54,25 @@ pub struct AuthedContext {
 
 /// Run the MCP server on stdio until EOF on stdin.
 ///
-/// Resolves `LINEAGENT_API_KEY` against the configured store, then serves
-/// JSON-RPC requests line by line.
+/// If `LINEAGENT_API_URL` is set, runs in HTTP-proxy mode — validates the key
+/// against the remote server and proxies all tool calls over HTTP. This lets
+/// the binary work against a remote LineAgent instance without a local
+/// SQLite database.
+///
+/// Otherwise opens the local SQLite store and serves directly (original mode).
 pub async fn run_stdio() -> anyhow::Result<()> {
-    let config = Config::from_env().map_err(|e| anyhow::anyhow!("load config: {e}"))?;
-    // The MCP process must not pollute stdout with anything but JSON-RPC.
-    // The data dir still needs to exist so we can open / migrate the DB.
-    std::fs::create_dir_all(&config.data_dir)
-        .map_err(|e| anyhow::anyhow!("create data dir {}: {e}", config.data_dir.display()))?;
-
     let api_key = std::env::var("LINEAGENT_API_KEY")
         .map_err(|_| anyhow::anyhow!("LINEAGENT_API_KEY is required for the MCP server"))?;
+
+    // Proxy mode: LINEAGENT_API_URL points to a remote server.
+    if let Ok(api_url) = std::env::var("LINEAGENT_API_URL") {
+        return proxy::run_stdio_proxy(api_url, api_key).await;
+    }
+
+    // Local mode: open the SQLite database directly.
+    let config = Config::from_env().map_err(|e| anyhow::anyhow!("load config: {e}"))?;
+    std::fs::create_dir_all(&config.data_dir)
+        .map_err(|e| anyhow::anyhow!("create data dir {}: {e}", config.data_dir.display()))?;
 
     let state: AppState = init_pool(config).await?;
     let user_service = crate::auth::UserService::new(state.clone());
