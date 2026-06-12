@@ -54,4 +54,40 @@ Always use MCP tools — never call the HTTP API directly.
 - Call `get_index` at the end of a session as a sanity check.
 - Do not invent identifiers — read them from create responses.
 
+## Setup (remote server)
+
+Point MCP at any LineAgent instance — no local database needed:
+
+```json
+{
+  "mcpServers": {
+    "lineagent": {
+      "command": "lineagent",
+      "args": ["mcp"],
+      "env": {
+        "LINEAGENT_API_URL": "https://your-lineagent.example.com",
+        "LINEAGENT_API_KEY": "lineagent_..."
+      }
+    }
+  }
+}
+```
+
+## Import from Linear
+
+Seed a LineAgent instance from an existing Linear workspace:
+
+```bash
+export LINEAGENT_LINEAR_API_KEY=lin_api_...
+lineagent import linear           # all teams
+lineagent import linear --team ENG --team INFRA   # specific teams
+lineagent import linear --dry-run  # preview without writing
+```
+
+## Slack notifications
+
+Set `LINEAGENT_SLACK_TOKEN` + `LINEAGENT_SLACK_CHANNEL` on the server to
+receive Slack notifications on every ticket create/update. No agent action
+required — notifications fire automatically.
+
 Full instructions: `AGENTS.md` in the project root.

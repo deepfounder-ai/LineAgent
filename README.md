@@ -115,6 +115,8 @@ Add to `claude_desktop_config.json`:
 
 Claude now has 19 tools: `create_ticket`, `update_ticket`, `list_tickets`, `search_tickets`, `add_comment`, `get_log`, `get_index`, and more. Agents can plan, track, and coordinate work across sessions.
 
+When `LINEAGENT_API_URL` points to a remote server the MCP binary runs in **proxy mode** — no local database required. All 19 tool calls are forwarded over HTTPS.
+
 ---
 
 ## Deploy on EasyPanel

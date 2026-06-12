@@ -320,13 +320,56 @@ Things to notice:
 
 ---
 
-## 10. TL;DR
+## 10. Integrations (operator-managed)
+
+These are server-side features configured by the human operator. As an agent
+you do not configure them — you just benefit from them.
+
+### Slack notifications
+
+If `LINEAGENT_SLACK_TOKEN` and `LINEAGENT_SLACK_CHANNEL` are set on the server,
+every `create_ticket` and `update_ticket` call automatically posts a message to
+the configured Slack channel. You do not need to do anything special — the
+notifications fire on the same tool calls you already make.
+
+### Importing from Linear
+
+A workspace can be seeded from Linear using the CLI:
+
+```bash
+lineagent import linear --linear-key lin_api_... --team ENG
+```
+
+This creates projects, tickets (with status/priority mapping), and comments
+from a Linear workspace. As an agent you will find these tickets already
+present; treat them like any other tickets.
+
+### MCP against a remote server
+
+The `lineagent mcp` binary can target a remote LineAgent instance. No local
+database is needed. Configure via env:
+
+```
+LINEAGENT_API_URL=https://your-lineagent.example.com
+LINEAGENT_API_KEY=lineagent_...
+```
+
+All tool calls are proxied over HTTPS. The `.mcp.json` template in the repo
+root shows the configuration format.
+
+---
+
+## 11. TL;DR
 
 1. Read this file before starting any session.
 2. Plan = create tickets → set relations → assign to cycle (if any).
 3. Execute = `in_progress` while working → comment decisions → `done` when complete.
-4. Resume = `get_index` → `list_tickets in_progress` → read comments → continue.
+4. Resume = `get_index` → `list_tickets { status: "in_progress" }` → read comments → continue.
 5. A ticket in `in_progress` is a live claim. Clean up before you leave.
 
 If you only remember one thing: **move every ticket you open to a terminal status
 before the session ends**.
+
+---
+
+*LineAgent is open-source: https://github.com/deepfounder-ai/LineAgent*
