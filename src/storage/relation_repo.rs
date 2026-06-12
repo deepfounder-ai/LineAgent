@@ -52,9 +52,9 @@ pub async fn insert(
     .execute(pool)
     .await
     .map_err(|e| match &e {
-        sqlx::Error::Database(db_err) if db_err.is_unique_violation() => {
-            AppError::Conflict(format!("relation ({from_ticket_id} → {to_ticket_id}: {relation_type}) already exists"))
-        }
+        sqlx::Error::Database(db_err) if db_err.is_unique_violation() => AppError::Conflict(
+            format!("relation ({from_ticket_id} → {to_ticket_id}: {relation_type}) already exists"),
+        ),
         _ => AppError::Db(e),
     })?;
 

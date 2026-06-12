@@ -138,11 +138,7 @@ async fn full_happy_path() {
 
     // 6. PATCH ticket → status done → 200
     let updated: Value = s
-        .patch_json(
-            "/api/v1/tickets/LIN-1",
-            &key,
-            &json!({ "status": "done" }),
-        )
+        .patch_json("/api/v1/tickets/LIN-1", &key, &json!({ "status": "done" }))
         .send()
         .await
         .unwrap()
@@ -200,7 +196,10 @@ async fn full_happy_path() {
         .await
         .unwrap();
     let projects = index.as_array().expect("index should be an array");
-    assert!(!projects.is_empty(), "expected at least one project in index");
+    assert!(
+        !projects.is_empty(),
+        "expected at least one project in index"
+    );
     assert_eq!(projects[0]["key"], "LIN");
     // total count should be 1 (the ticket we created)
     assert_eq!(projects[0]["counts"]["total"], 1);
@@ -213,12 +212,7 @@ async fn full_happy_path() {
 #[tokio::test]
 async fn unauthenticated_returns_401() {
     let s = TestServer::start().await;
-    let resp = s
-        .http
-        .get(s.url("/api/v1/projects"))
-        .send()
-        .await
-        .unwrap();
+    let resp = s.http.get(s.url("/api/v1/projects")).send().await.unwrap();
     assert_eq!(resp.status(), 401);
     assert!(resp.headers().contains_key("www-authenticate"));
     let body: Value = resp.json().await.unwrap();
@@ -352,11 +346,7 @@ async fn uncovered_routes() {
 
     // 3. PATCH /api/v1/projects/LIN → update name → 200
     let resp = s
-        .patch_json(
-            "/api/v1/projects/LIN",
-            &key,
-            &json!({ "name": "Updated" }),
-        )
+        .patch_json("/api/v1/projects/LIN", &key, &json!({ "name": "Updated" }))
         .send()
         .await
         .unwrap();
@@ -427,7 +417,10 @@ async fn uncovered_routes() {
         .unwrap();
     assert_eq!(resp.status(), 201, "add_relation should 201");
     let relation: Value = resp.json().await.unwrap();
-    let relation_id = relation["id"].as_str().expect("relation should have id").to_string();
+    let relation_id = relation["id"]
+        .as_str()
+        .expect("relation should have id")
+        .to_string();
     assert_eq!(relation["from_identifier"], "LIN-1");
 
     // 8. DELETE /api/v1/relations/:id → 200 or 204
@@ -443,7 +436,11 @@ async fn uncovered_routes() {
     );
 
     // 9. DELETE /api/v1/tickets/LIN-1 → 200 or 204
-    let resp = s.delete("/api/v1/tickets/LIN-1", &key).send().await.unwrap();
+    let resp = s
+        .delete("/api/v1/tickets/LIN-1", &key)
+        .send()
+        .await
+        .unwrap();
     assert!(
         resp.status() == 200 || resp.status() == 204,
         "delete_ticket should 200 or 204, got {}",
@@ -462,7 +459,10 @@ async fn uncovered_routes() {
         .unwrap();
     assert_eq!(resp.status(), 201, "create_cycle should 201");
     let cycle: Value = resp.json().await.unwrap();
-    let cycle_id = cycle["id"].as_str().expect("cycle should have id").to_string();
+    let cycle_id = cycle["id"]
+        .as_str()
+        .expect("cycle should have id")
+        .to_string();
     assert_eq!(cycle["name"], "Sprint 1");
 
     // 11. PATCH /api/v1/cycles/:id → {"name":"Sprint 2"} → 200
@@ -505,9 +505,6 @@ async fn log_returns_events() {
 
     let items = log["items"].as_array().unwrap();
     assert!(!items.is_empty(), "log should have events");
-    let kinds: Vec<&str> = items
-        .iter()
-        .filter_map(|e| e["kind"].as_str())
-        .collect();
+    let kinds: Vec<&str> = items.iter().filter_map(|e| e["kind"].as_str()).collect();
     assert!(kinds.contains(&"project.create"), "kinds: {kinds:?}");
 }

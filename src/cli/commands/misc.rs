@@ -56,11 +56,7 @@ pub fn run_completions(shell: clap_complete::Shell) {
 // ---------------------------------------------------------------------------
 
 /// `search QUERY [--limit N]`
-pub async fn run_search(
-    query: &str,
-    limit: Option<i64>,
-    cfg: &CliConfig,
-) -> CliResult<()> {
+pub async fn run_search(query: &str, limit: Option<i64>, cfg: &CliConfig) -> CliResult<()> {
     let client = Client::new(cfg)?;
     // Simple percent-encoding for query string values.
     let encoded = url_encode(query);
@@ -82,11 +78,7 @@ pub async fn run_index(cfg: &CliConfig) -> CliResult<()> {
 }
 
 /// `log [--since <ts>] [--limit N]`
-pub async fn run_log(
-    since: Option<&str>,
-    limit: Option<i64>,
-    cfg: &CliConfig,
-) -> CliResult<()> {
+pub async fn run_log(since: Option<&str>, limit: Option<i64>, cfg: &CliConfig) -> CliResult<()> {
     let client = Client::new(cfg)?;
     let mut params: Vec<String> = Vec::new();
     if let Some(s) = since {
@@ -111,13 +103,9 @@ fn url_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z'
-            | b'a'..=b'z'
-            | b'0'..=b'9'
-            | b'-'
-            | b'.'
-            | b'_'
-            | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{b:02X}")),
         }
     }

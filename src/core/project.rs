@@ -64,16 +64,10 @@ impl ProjectService {
         validate_key(&key)?;
 
         let id = Uuid::now_v7().to_string();
-        let row = project_repo::insert(&self.state.db, &id, user_id, &key, name, description).await?;
+        let row =
+            project_repo::insert(&self.state.db, &id, user_id, &key, name, description).await?;
 
-        event_repo::append(
-            &self.state.db,
-            user_id,
-            "project.create",
-            Some(&key),
-            None,
-        )
-        .await?;
+        event_repo::append(&self.state.db, user_id, "project.create", Some(&key), None).await?;
 
         Ok(Project::from(row))
     }
@@ -111,14 +105,7 @@ impl ProjectService {
 
         project_repo::update(&self.state.db, &existing.id, name, description).await?;
 
-        event_repo::append(
-            &self.state.db,
-            user_id,
-            "project.update",
-            Some(&key),
-            None,
-        )
-        .await?;
+        event_repo::append(&self.state.db, user_id, "project.update", Some(&key), None).await?;
 
         let updated = project_repo::get_by_id(&self.state.db, &existing.id)
             .await?
@@ -133,7 +120,10 @@ fn validate_key(key: &str) -> Result<()> {
     if key.is_empty() {
         return Err(AppError::Validation("project key must not be empty".into()));
     }
-    if !key.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) {
+    if !key
+        .chars()
+        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+    {
         return Err(AppError::Validation(
             "project key may only contain [A-Z0-9]".into(),
         ));

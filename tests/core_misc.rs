@@ -29,12 +29,12 @@ async fn create_test_user(state: &lineagent::storage::AppState) -> String {
 }
 
 /// Create a project + two tickets for use in tests.
-async fn setup_project_and_tickets(
-    state: &lineagent::storage::AppState,
-    user_id: &str,
-) {
+async fn setup_project_and_tickets(state: &lineagent::storage::AppState, user_id: &str) {
     let proj_svc = ProjectService::new(state.clone());
-    proj_svc.create(user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
 
     let ticket_svc = TicketService::new(state.clone());
     ticket_svc
@@ -83,8 +83,12 @@ async fn comment_add_and_list() {
 
     let svc = CommentService::new(state);
 
-    svc.add(&user_id, "LIN-1", Some("alice"), "First comment").await.unwrap();
-    svc.add(&user_id, "LIN-1", None, "Second comment").await.unwrap();
+    svc.add(&user_id, "LIN-1", Some("alice"), "First comment")
+        .await
+        .unwrap();
+    svc.add(&user_id, "LIN-1", None, "Second comment")
+        .await
+        .unwrap();
 
     let comments = svc.list(&user_id, "LIN-1").await.unwrap();
     assert_eq!(comments.len(), 2);
@@ -165,12 +169,21 @@ async fn cycle_create_list_update() {
     let user_id = create_test_user(&state).await;
 
     let proj_svc = ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
 
     let svc = CycleService::new(state);
 
     let cycle = svc
-        .create(&user_id, "LIN", "Sprint 1", Some("2025-01-01"), Some("2025-01-14"))
+        .create(
+            &user_id,
+            "LIN",
+            "Sprint 1",
+            Some("2025-01-01"),
+            Some("2025-01-14"),
+        )
         .await
         .unwrap();
 

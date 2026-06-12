@@ -47,10 +47,7 @@ pub async fn run(cmd: &CycleCmd, cfg: &CliConfig, json: bool) -> CliResult<()> {
             if json {
                 print_json(&c)?;
             } else {
-                print_line(format!(
-                    "created cycle {}",
-                    c["id"].as_str().unwrap_or("?")
-                ));
+                print_line(format!("created cycle {}", c["id"].as_str().unwrap_or("?")));
             }
         }
         CycleCmd::Update {

@@ -135,7 +135,10 @@ fn read_file_config(path: &Path) -> Option<FileConfig> {
     match toml::from_str::<FileConfig>(&body) {
         Ok(c) => Some(c),
         Err(e) => {
-            eprintln!("lineagent: warning: could not parse {}: {e}", path.display());
+            eprintln!(
+                "lineagent: warning: could not parse {}: {e}",
+                path.display()
+            );
             None
         }
     }
@@ -151,7 +154,10 @@ pub fn read_credentials() -> Option<Credentials> {
     match toml::from_str::<Credentials>(&body) {
         Ok(c) => Some(c),
         Err(e) => {
-            eprintln!("lineagent: warning: could not parse {}: {e}", path.display());
+            eprintln!(
+                "lineagent: warning: could not parse {}: {e}",
+                path.display()
+            );
             None
         }
     }

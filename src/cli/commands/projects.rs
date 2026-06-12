@@ -23,8 +23,7 @@ pub async fn run(cmd: &ProjectCmd, cfg: &CliConfig, json: bool) -> CliResult<()>
             }
         }
         ProjectCmd::Get { key } => {
-            let p: serde_json::Value =
-                client.get(&format!("/api/v1/projects/{key}")).await?;
+            let p: serde_json::Value = client.get(&format!("/api/v1/projects/{key}")).await?;
             print_json(&p)?;
         }
         ProjectCmd::Create {
@@ -56,8 +55,9 @@ pub async fn run(cmd: &ProjectCmd, cfg: &CliConfig, json: bool) -> CliResult<()>
                 "name": name,
                 "description": description,
             });
-            let p: serde_json::Value =
-                client.patch(&format!("/api/v1/projects/{key}"), &body).await?;
+            let p: serde_json::Value = client
+                .patch(&format!("/api/v1/projects/{key}"), &body)
+                .await?;
             if json {
                 print_json(&p)?;
             } else {

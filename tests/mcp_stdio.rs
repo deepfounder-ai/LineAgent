@@ -127,9 +127,13 @@ async fn call_create_ticket_returns_lin1() {
     let (_state, ctx) = setup().await;
 
     // First create the project.
-    tools::call_tool("create_project", json!({ "key": "LIN", "name": "LineAgent" }), &ctx)
-        .await
-        .expect("create_project failed");
+    tools::call_tool(
+        "create_project",
+        json!({ "key": "LIN", "name": "LineAgent" }),
+        &ctx,
+    )
+    .await
+    .expect("create_project failed");
 
     let result = tools::call_tool(
         "create_ticket",
@@ -152,9 +156,13 @@ async fn call_create_ticket_returns_lin1() {
 async fn call_get_ticket() {
     let (_state, ctx) = setup().await;
 
-    tools::call_tool("create_project", json!({ "key": "LIN", "name": "LineAgent" }), &ctx)
-        .await
-        .expect("create_project");
+    tools::call_tool(
+        "create_project",
+        json!({ "key": "LIN", "name": "LineAgent" }),
+        &ctx,
+    )
+    .await
+    .expect("create_project");
 
     tools::call_tool(
         "create_ticket",
@@ -183,9 +191,13 @@ async fn call_get_ticket() {
 async fn call_add_comment() {
     let (_state, ctx) = setup().await;
 
-    tools::call_tool("create_project", json!({ "key": "LIN", "name": "LineAgent" }), &ctx)
-        .await
-        .expect("create_project");
+    tools::call_tool(
+        "create_project",
+        json!({ "key": "LIN", "name": "LineAgent" }),
+        &ctx,
+    )
+    .await
+    .expect("create_project");
 
     tools::call_tool(
         "create_ticket",
@@ -216,9 +228,13 @@ async fn call_add_comment() {
 async fn call_search_tickets() {
     let (_state, ctx) = setup().await;
 
-    tools::call_tool("create_project", json!({ "key": "LIN", "name": "LineAgent" }), &ctx)
-        .await
-        .expect("create_project");
+    tools::call_tool(
+        "create_project",
+        json!({ "key": "LIN", "name": "LineAgent" }),
+        &ctx,
+    )
+    .await
+    .expect("create_project");
 
     tools::call_tool(
         "create_ticket",
@@ -254,5 +270,8 @@ async fn call_unknown_tool_returns_error() {
     assert!(result.is_err(), "expected Err for unknown tool");
     let err = result.unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("no_such_tool"), "error message should name the unknown tool: {msg}");
+    assert!(
+        msg.contains("no_such_tool"),
+        "error message should name the unknown tool: {msg}"
+    );
 }

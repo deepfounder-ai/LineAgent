@@ -38,10 +38,7 @@ pub async fn run(cmd: &CommentCmd, cfg: &CliConfig, json: bool) -> CliResult<()>
             if json {
                 print_json(&c)?;
             } else {
-                print_line(format!(
-                    "added comment {}",
-                    c["id"].as_str().unwrap_or("?")
-                ));
+                print_line(format!("added comment {}", c["id"].as_str().unwrap_or("?")));
             }
         }
     }

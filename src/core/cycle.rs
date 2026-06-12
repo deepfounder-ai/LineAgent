@@ -64,7 +64,17 @@ impl CycleService {
         let number = project_repo::next_cycle_number(db, &project.id).await?;
         let id = Uuid::now_v7().to_string();
 
-        let row = cycle_repo::insert(db, &id, user_id, &project.id, number, name, starts_at, ends_at).await?;
+        let row = cycle_repo::insert(
+            db,
+            &id,
+            user_id,
+            &project.id,
+            number,
+            name,
+            starts_at,
+            ends_at,
+        )
+        .await?;
 
         event_repo::append(db, user_id, "cycle.create", Some(&key), None).await?;
 

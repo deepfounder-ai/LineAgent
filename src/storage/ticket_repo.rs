@@ -70,6 +70,7 @@ pub struct TicketPatch {
 }
 
 /// Insert a new ticket row and return it.
+#[allow(clippy::too_many_arguments)]
 pub async fn insert(
     pool: &SqlitePool,
     id: &str,
@@ -173,10 +174,15 @@ pub async fn get_by_identifier(
 ///
 /// Dynamic filtering is done by building the SQL string manually and binding
 /// parameters positionally; this avoids the sqlx compile-time macro restrictions.
-pub async fn list(pool: &SqlitePool, user_id: &str, filter: &TicketFilter) -> Result<Vec<TicketRow>> {
+pub async fn list(
+    pool: &SqlitePool,
+    user_id: &str,
+    filter: &TicketFilter,
+) -> Result<Vec<TicketRow>> {
     let limit = filter.limit.unwrap_or(100).min(1000);
 
-    let select = "SELECT id,user_id,project_id,number,identifier,title,description,status,priority,\
+    let select =
+        "SELECT id,user_id,project_id,number,identifier,title,description,status,priority,\
                   assignee,parent_id,cycle_id,created_at,updated_at FROM tickets";
     let mut conditions = vec!["user_id = ?1".to_string()];
     let mut params: Vec<String> = Vec::new(); // extra params after user_id (which is ?1)

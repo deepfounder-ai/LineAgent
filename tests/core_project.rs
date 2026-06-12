@@ -1,5 +1,5 @@
-use lineagent::{config::Config, storage::pool::init_pool};
 use lineagent::core::project::ProjectService;
+use lineagent::{config::Config, storage::pool::init_pool};
 
 async fn setup() -> lineagent::storage::AppState {
     let mut cfg = Config::for_test(std::path::PathBuf::from("/tmp"));
@@ -12,7 +12,10 @@ async fn create_project_uppercases_key() {
     let state = setup().await;
     let user_id = create_test_user(&state).await;
     let svc = ProjectService::new(state);
-    let proj = svc.create(&user_id, "lin", "LineAgent", None).await.unwrap();
+    let proj = svc
+        .create(&user_id, "lin", "LineAgent", None)
+        .await
+        .unwrap();
     assert_eq!(proj.key, "LIN");
     assert_eq!(proj.name, "LineAgent");
 }
@@ -23,7 +26,10 @@ async fn create_duplicate_key_returns_conflict() {
     let user_id = create_test_user(&state).await;
     let svc = ProjectService::new(state);
     svc.create(&user_id, "LIN", "First", None).await.unwrap();
-    let err = svc.create(&user_id, "LIN", "Second", None).await.unwrap_err();
+    let err = svc
+        .create(&user_id, "LIN", "Second", None)
+        .await
+        .unwrap_err();
     assert!(matches!(err, lineagent::error::AppError::Conflict(_)));
 }
 
@@ -46,7 +52,9 @@ async fn update_project() {
     let user_id = create_test_user(&state).await;
     let svc = ProjectService::new(state);
     svc.create(&user_id, "UPD", "Original", None).await.unwrap();
-    svc.update(&user_id, "UPD", Some("Updated"), None).await.unwrap();
+    svc.update(&user_id, "UPD", Some("Updated"), None)
+        .await
+        .unwrap();
     let proj = svc.get(&user_id, "UPD").await.unwrap();
     assert_eq!(proj.name, "Updated");
 }
@@ -56,12 +64,15 @@ async fn create_appends_event() {
     let state = setup().await;
     let user_id = create_test_user(&state).await;
     let svc = ProjectService::new(state.clone());
-    svc.create(&user_id, "EVT", "EventTest", None).await.unwrap();
+    svc.create(&user_id, "EVT", "EventTest", None)
+        .await
+        .unwrap();
     // verify event row exists
     let events = sqlx::query("SELECT kind FROM events WHERE user_id = ?1")
         .bind(&user_id)
         .fetch_all(&state.db)
-        .await.unwrap();
+        .await
+        .unwrap();
     assert!(!events.is_empty());
     use sqlx::Row;
     let kind: String = events[0].try_get("kind").unwrap();

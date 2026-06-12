@@ -1,4 +1,6 @@
-use lineagent::core::ticket::{CreateTicket, Priority, RelationType, Status, TicketService, UpdateTicket};
+use lineagent::core::ticket::{
+    CreateTicket, Priority, RelationType, Status, TicketService, UpdateTicket,
+};
 
 #[test]
 fn parses_valid_and_rejects_invalid() {
@@ -11,7 +13,14 @@ fn parses_valid_and_rejects_invalid() {
 
 #[test]
 fn status_variants() {
-    let cases = ["backlog", "todo", "in_progress", "review", "done", "cancelled"];
+    let cases = [
+        "backlog",
+        "todo",
+        "in_progress",
+        "review",
+        "done",
+        "cancelled",
+    ];
     for s in cases {
         assert!(s.parse::<Status>().is_ok(), "failed to parse: {s}");
     }
@@ -79,7 +88,10 @@ async fn ticket_identifiers_are_sequential() {
     let state = setup_state().await;
     let user_id = create_test_user(&state).await;
     let proj_svc = lineagent::core::project::ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
 
     let svc = TicketService::new(state);
     let t1 = svc
@@ -123,7 +135,10 @@ async fn independent_project_counters() {
     let state = setup_state().await;
     let user_id = create_test_user(&state).await;
     let proj_svc = lineagent::core::project::ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
     proj_svc.create(&user_id, "OPS", "Ops", None).await.unwrap();
 
     let svc = TicketService::new(state);
@@ -151,7 +166,10 @@ async fn invalid_status_returns_validation_error() {
     let state = setup_state().await;
     let user_id = create_test_user(&state).await;
     let proj_svc = lineagent::core::project::ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
 
     let svc = TicketService::new(state);
     let err = svc
@@ -178,7 +196,10 @@ async fn get_ticket_includes_comments_and_relations() {
     let state = setup_state().await;
     let user_id = create_test_user(&state).await;
     let proj_svc = lineagent::core::project::ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
     let svc = TicketService::new(state.clone());
 
     svc.create(
@@ -224,7 +245,10 @@ async fn update_and_delete_ticket() {
     let state = setup_state().await;
     let user_id = create_test_user(&state).await;
     let proj_svc = lineagent::core::project::ProjectService::new(state.clone());
-    proj_svc.create(&user_id, "LIN", "LineAgent", None).await.unwrap();
+    proj_svc
+        .create(&user_id, "LIN", "LineAgent", None)
+        .await
+        .unwrap();
     let svc = TicketService::new(state.clone());
     svc.create(
         &user_id,

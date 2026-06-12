@@ -40,10 +40,7 @@ pub async fn run(cmd: &TicketCmd, cfg: &CliConfig, json: bool) -> CliResult<()> 
             if json {
                 print_json(&tickets)?;
             } else {
-                let arr = tickets
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_default();
+                let arr = tickets.as_array().cloned().unwrap_or_default();
                 for t in &arr {
                     print_line(format!(
                         "{} [{}] {}",
@@ -55,8 +52,7 @@ pub async fn run(cmd: &TicketCmd, cfg: &CliConfig, json: bool) -> CliResult<()> 
             }
         }
         TicketCmd::Get { id } => {
-            let t: serde_json::Value =
-                client.get(&format!("/api/v1/tickets/{id}")).await?;
+            let t: serde_json::Value = client.get(&format!("/api/v1/tickets/{id}")).await?;
             print_json(&t)?;
         }
         TicketCmd::Create {
@@ -102,8 +98,9 @@ pub async fn run(cmd: &TicketCmd, cfg: &CliConfig, json: bool) -> CliResult<()> 
                 "assignee": assignee,
                 "parent_identifier": parent_identifier,
             });
-            let t: serde_json::Value =
-                client.patch(&format!("/api/v1/tickets/{id}"), &body).await?;
+            let t: serde_json::Value = client
+                .patch(&format!("/api/v1/tickets/{id}"), &body)
+                .await?;
             if json {
                 print_json(&t)?;
             } else {
@@ -111,8 +108,7 @@ pub async fn run(cmd: &TicketCmd, cfg: &CliConfig, json: bool) -> CliResult<()> 
             }
         }
         TicketCmd::Delete { id } => {
-            let _: serde_json::Value =
-                client.delete(&format!("/api/v1/tickets/{id}")).await?;
+            let _: serde_json::Value = client.delete(&format!("/api/v1/tickets/{id}")).await?;
             if json {
                 print_json(&serde_json::json!({ "deleted": id }))?;
             } else {
