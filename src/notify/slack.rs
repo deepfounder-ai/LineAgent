@@ -84,7 +84,7 @@ pub fn ticket_created(
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": format!("{pe} *<{identifier}>* — New ticket\n*{title}*")
+                    "text": format!("{pe} *{identifier}* — New ticket\n*{title}*")
                 }
             },
             {
@@ -121,7 +121,7 @@ pub fn ticket_updated(
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": format!("✏️ *<{identifier}>* — Updated\n*{title}*")
+                    "text": format!("✏️ *{identifier}* — Updated\n*{title}*")
                 }
             },
             {
