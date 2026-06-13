@@ -67,36 +67,55 @@ fn status_label(s: &str) -> &'static str {
     }
 }
 
+fn truncate(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        s.to_string()
+    } else {
+        let t: String = s.chars().take(max).collect();
+        format!("{t}…")
+    }
+}
+
 pub fn ticket_created(
     config: Arc<Config>,
     identifier: &str,
     title: &str,
     status: &str,
     priority: &str,
+    assignee: Option<&str>,
+    description: Option<&str>,
 ) {
     let pe = priority_emoji(priority);
     let sl = status_label(status);
     let fallback = format!("[{identifier}] created: {title}");
-    let payload = json!({
-        "text": fallback,
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": format!("{pe} *{identifier}* — New ticket\n*{title}*")
-                }
-            },
-            {
-                "type": "context",
-                "elements": [
-                    {"type": "mrkdwn", "text": format!("Status: `{sl}`")},
-                    {"type": "mrkdwn", "text": format!("Priority: `{priority}`")}
-                ]
+
+    let mut blocks: Vec<Value> = vec![
+        json!({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": format!("{pe} *{identifier}* — New ticket\n*{title}*")
             }
-        ]
-    });
-    notify(config, payload);
+        }),
+    ];
+
+    if let Some(desc) = description.filter(|d| !d.trim().is_empty()) {
+        blocks.push(json!({
+            "type": "section",
+            "text": { "type": "mrkdwn", "text": truncate(desc, 200) }
+        }));
+    }
+
+    let mut context: Vec<Value> = vec![
+        json!({"type": "mrkdwn", "text": format!("Status: `{sl}`")}),
+        json!({"type": "mrkdwn", "text": format!("Priority: `{priority}`")}),
+    ];
+    if let Some(a) = assignee {
+        context.push(json!({"type": "mrkdwn", "text": format!("Assignee: {a}")}));
+    }
+    blocks.push(json!({ "type": "context", "elements": context }));
+
+    notify(config, json!({ "text": fallback, "blocks": blocks }));
 }
 
 pub fn ticket_updated(
@@ -104,31 +123,38 @@ pub fn ticket_updated(
     identifier: &str,
     title: &str,
     status: &str,
+    priority: &str,
     assignee: Option<&str>,
+    description: Option<&str>,
 ) {
     let sl = status_label(status);
     let fallback = format!("[{identifier}] updated: {title}");
+
+    let mut blocks: Vec<Value> = vec![
+        json!({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": format!("✏️ *{identifier}* — Updated\n*{title}*")
+            }
+        }),
+    ];
+
+    if let Some(desc) = description.filter(|d| !d.trim().is_empty()) {
+        blocks.push(json!({
+            "type": "section",
+            "text": { "type": "mrkdwn", "text": truncate(desc, 200) }
+        }));
+    }
+
     let mut context: Vec<Value> = vec![
         json!({"type": "mrkdwn", "text": format!("Status: `{sl}`")}),
+        json!({"type": "mrkdwn", "text": format!("Priority: `{priority}`")}),
     ];
     if let Some(a) = assignee {
         context.push(json!({"type": "mrkdwn", "text": format!("Assignee: {a}")}));
     }
-    let payload = json!({
-        "text": fallback,
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": format!("✏️ *{identifier}* — Updated\n*{title}*")
-                }
-            },
-            {
-                "type": "context",
-                "elements": context
-            }
-        ]
-    });
-    notify(config, payload);
+    blocks.push(json!({ "type": "context", "elements": context }));
+
+    notify(config, json!({ "text": fallback, "blocks": blocks }));
 }

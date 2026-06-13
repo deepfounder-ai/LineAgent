@@ -368,6 +368,8 @@ impl TicketService {
             &ticket.title,
             &ticket.status,
             &ticket.priority,
+            ticket.assignee.as_deref(),
+            ticket.description.as_deref(),
         );
         Ok(ticket)
     }
@@ -510,7 +512,9 @@ impl TicketService {
             &ticket.identifier,
             &ticket.title,
             &ticket.status,
+            &ticket.priority,
             ticket.assignee.as_deref(),
+            ticket.description.as_deref(),
         );
         Ok(ticket)
     }
